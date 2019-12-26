@@ -12,7 +12,7 @@ pub struct ItemType {
     pub id: u32,
     pub name: String,
     #[builder(default)]
-    pub minimum_quantity: Option<f32>,
+    pub minimum_quantity: f32,
     #[builder(default)]
     pub ttl: Option<Duration>,
     #[builder(default)]

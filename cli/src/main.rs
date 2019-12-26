@@ -7,7 +7,11 @@ use std::time::SystemTime;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "Inventory Manager", author = "Joël Lupien <jojolepromain@gmail.com>", about = "Command line utility to manage your personal inventory.")]
+#[structopt(
+    name = "Inventory Manager",
+    author = "Joël Lupien <jojolepromain@gmail.com>",
+    about = "Command line utility to manage your personal inventory."
+)]
 pub struct Manager {
     /// Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to \"inventory\".
     #[structopt(name = "name", short, long, default_value = "default")]
@@ -24,218 +28,172 @@ pub struct Manager {
     pub interactive: bool,
     #[structopt(short, long)]
     pub quiet: bool,
-    #[structopt(short, long)]
-    pub verbose: bool,
     #[structopt(subcommand)]
-    pub crud: Command,
+    pub command: Command,
+}
+
+impl Manager {
+    pub fn exec(&self, inventory: &mut Inventory) {
+        match &self.command {
+            Command::CreateType(cmd) => create(cmd, inventory),
+            Command::ReadType(cmd) => view(cmd, inventory),
+            Command::UpdateType(cmd) => change(cmd, inventory),
+            Command::DeleteType(cmd) => delete(cmd, inventory),
+            Command::CreateInstance(cmd) => add(cmd, inventory),
+            Command::ReadInstance(cmd) => edit(cmd, inventory),
+            Command::UpdateInstance(cmd) => {} //use_instance(cmd, inventory),
+            Command::DeleteInstance(cmd) => {} //open(cmd, inventory),
+            Command::ListExpired => print_expired(inventory),
+            Command::ListMissing => print_missing(inventory),
+            Command::Use { type_id } => use_instance(type_id, inventory),
+            Command::Trash { instance_id } => trash(instance_id, inventory),
+        }
+    }
 }
 
 #[derive(StructOpt, Debug)]
 pub enum Command {
-    #[structopt(name = "ct")]
-    CreateType {
-        /// The name of the item type.
-        name: String,
-        /// The minimum quantity of this item type you want to have at all times.
-        #[structopt(short, long)]
-        minimum_quantity: Option<f32>,
-        /// The time to live of this item type once it is opened.
-        #[structopt(short, long)]
-        ttl: Option<humantime::Duration>,
-        /// Whether this item is in the 'opened' state by default. For example fresh food.
-        #[structopt(short, long)]
-        open_by_default: Option<bool>,
-    },
-    #[structopt(name = "rt")]
-    ReadType {
-        /// The id of the item type you want to view.
-        #[structopt(short, long)]
-        id: Option<u32>,
-        // TODO
-    },
-    #[structopt(name = "ut")]
-    UpdateType {
-        /// The id of the item type you want to edit.
-        id: u32,
-        /// Set the new name of this item type.
-        #[structopt(short, long)]
-        name: Option<String>,
-        /// The minimum quantity of this item type you want to have at all times.
-        #[structopt(short, long)]
-        minimum_quantity: Option<f32>,
-        /// The time to live of this item type once it is opened.
-        #[structopt(short, long)]
-        ttl: Option<humantime::Duration>,
-        /// Whether this item is in the 'opened' state by default. For example fresh food.
-        #[structopt(short, long)]
-        open_by_default: Option<bool>,
-    },
-    #[structopt(name = "dt")]
-    DeleteType {
-        /// The id of the item type you want to delete.
-        id: u32,
-    },
-    #[structopt(name = "ci")]
-    CreateInstance {
-        item_type: u32,
-        /// The quantity of this item instance. The unit is specified in the item instance. Defaults to 1.0.
-        #[structopt(short, long, default_value = "1.0")]
-        quantity: f32,
-        #[structopt(short, long)]
-        model: Option<String>,
-        #[structopt(short, long)]
-        serial: Option<String>,
-        #[structopt(long)]
-        extra: Option<String>,
-        #[structopt(short, long)]
-        location: Option<String>,
-        #[structopt(short, long)]
-        value: Option<f32>,
-        #[structopt(short, long)]
-        expires_at: Option<humantime::Timestamp>,
-    },
-    #[structopt(name = "ri")]
-    ReadInstance {
-        /// The id of the item type.
-        id: Option<u32>,
-        // TODO
-    },
-    #[structopt(name = "ui")]
-    UpdateInstance {
-        /// The id of the item type.
-        id: u32,
-        /// The quantity of this item instance. The unit is specified in the item instance.
-        #[structopt(short, long)]
-        quantity: Option<f32>,
-        #[structopt(short, long)]
-        model: Option<String>,
-        #[structopt(short, long)]
-        serial: Option<String>,
-        #[structopt(long)]
-        extra: Option<String>,
-        #[structopt(short, long)]
-        location: Option<String>,
-        #[structopt(short, long)]
-        value: Option<f32>,
-        #[structopt(short, long)]
-        expires_at: Option<Option<humantime::Timestamp>>,
-        #[structopt(short, long)]
-        opened_at: Option<Option<humantime::Timestamp>>,
-    },
-    #[structopt(name = "di")]
-    DeleteInstance {
-        /// The id of the item type.
-        id: u32,
-    },
+    #[structopt(name = "ct", flatten)]
+    CreateType(CreateTypeCommand),
+    #[structopt(name = "rt", flatten)]
+    ReadType(ReadTypeCommand),
+    #[structopt(name = "ut", flatten)]
+    UpdateType(UpdateTypeCommand),
+    #[structopt(name = "dt", flatten)]
+    DeleteType(DeleteTypeCommand),
+    #[structopt(name = "ci", flatten)]
+    CreateInstance(CreateInstanceCommand),
+    #[structopt(name = "ri", flatten)]
+    ReadInstance(ReadInstanceCommand),
+    #[structopt(name = "ui", flatten)]
+    UpdateInstance(UpdateInstanceCommand),
+    #[structopt(name = "di", flatten)]
+    DeleteInstance(DeleteInstanceCommand),
+    #[structopt(name = "list-expired")]
+    ListExpired,
+    #[structopt(name = "list-missing")]
+    ListMissing,
+    #[structopt(name = "use")]
+    Use { type_id: u32 },
+    #[structopt(name = "trash")]
+    Trash { instance_id: u32 },
+}
+
+#[derive(StructOpt, Debug)]
+pub struct CreateTypeCommand {
+    /// The name of the item type.
+    name: String,
+    /// The minimum quantity of this item type you want to have at all times.
+    #[structopt(short, long, default_value = "0.0")]
+    minimum_quantity: f32,
+    /// The time to live of this item type once it is opened.
+    #[structopt(short, long)]
+    ttl: Option<humantime::Duration>,
+    /// Whether this item is in the 'opened' state by default. For example fresh food.
+    #[structopt(short, long)]
+    open_by_default: Option<bool>,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct ReadTypeCommand {
+    /// The id of the item type you want to view.
+    /// Not implemented yet
+    #[structopt(short, long)]
+    // TODO
+    id: Option<u32>,
+    /// The name of the item type you want to view.
+    #[structopt(short, long)]
+    name: Option<String>,
+    // TODO
+}
+
+#[derive(StructOpt, Debug)]
+pub struct UpdateTypeCommand {
+    /// The id of the item type you want to edit.
+    id: u32,
+    /// Set the new name of this item type.
+    #[structopt(short, long)]
+    name: Option<String>,
+    /// The minimum quantity of this item type you want to have at all times.
+    #[structopt(short, long)]
+    minimum_quantity: Option<f32>,
+    /// The time to live of this item type once it is opened.
+    #[structopt(short, long)]
+    ttl: Option<Option<humantime::Duration>>,
+    /// Whether this item is in the 'opened' state by default. For example fresh food.
+    #[structopt(short, long)]
+    open_by_default: Option<bool>,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct DeleteTypeCommand {
+    /// The id of the item type you want to delete.
+    id: u32,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct CreateInstanceCommand {
+    /// The id of the item type associated with this new item instance.
+    item_type: u32,
+    /// The quantity of this item instance. The unit is specified in the item instance. Defaults to 1.0.
+    #[structopt(short, long, default_value = "1.0")]
+    quantity: f32,
+    #[structopt(short, long)]
+    model: Option<String>,
+    #[structopt(short, long)]
+    serial: Option<String>,
+    #[structopt(long)]
+    extra: Option<String>,
+    #[structopt(short, long)]
+    location: Option<String>,
+    #[structopt(short, long)]
+    value: Option<f32>,
+    #[structopt(short, long)]
+    expires_at: Option<humantime::Timestamp>,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct ReadInstanceCommand {
+    /// The id of the item type.
+    id: Option<u32>,
+    // TODO
+}
+
+#[derive(StructOpt, Debug)]
+pub struct UpdateInstanceCommand {
+    /// The id of the item type.
+    id: u32,
+    /// The quantity of this item instance. The unit is specified in the item instance.
+    #[structopt(short, long)]
+    quantity: Option<f32>,
+    #[structopt(short, long)]
+    model: Option<String>,
+    #[structopt(short, long)]
+    serial: Option<String>,
+    #[structopt(long)]
+    extra: Option<String>,
+    #[structopt(short, long)]
+    location: Option<String>,
+    #[structopt(short, long)]
+    value: Option<f32>,
+    #[structopt(short, long)]
+    expires_at: Option<Option<humantime::Timestamp>>,
+    #[structopt(short, long)]
+    opened_at: Option<Option<humantime::Timestamp>>,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct DeleteInstanceCommand {
+    /// The id of the item type.
+    id: u32,
 }
 
 fn main() {
-    Manager::from_args();
+    let manager = Manager::from_args();
     return;
-    let matches = App::new("Inventory Manager")
-        .version("0.1.0")
-        .author("Joël Lupien <jojolepromain@gmail.com>")
-        .about("Command line utility to manage your personal inventory.")
-        .arg(
-            Arg::with_name("inventory name")
-                .short("i")
-                .long("inventory")
-                .help("Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to \"inventory\"")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("workdir")
-                .help("The directory to use to load and save the inventory files.")
-                .short("w")
-                .long("workdir")
-                .takes_value(true)
-        )
-        .arg(
-            Arg::with_name("v")
-                .short("v")
-                .help("Verbose mode"),
-        )
-        .subcommand(
-            SubCommand::with_name("create")
-                .about("Creates an item type.")
-                .arg(Arg::with_name("name").required(true).help("The name of the item type.").takes_value(true))
-                .arg(Arg::with_name("minimum quantity").long("min").help("The minimum quantity of this item type you want to have at all times.").takes_value(true))
-                .arg(Arg::with_name("ttl").long("ttl").help("The time to live of this item type once it is opened.").takes_value(true))
-                .arg(Arg::with_name("open by default").long("open-by-default").takes_value(true).value_names(&["true/false"]).help("Whether this item is in the 'opened' state by default. For example fresh food."))
-        )
-        .subcommand(
-            SubCommand::with_name("view")
-                .about("Shows item types.")
-                .arg(Arg::with_name("name").help("Filters by the name of the item type.").takes_value(true))
-        )
-        .subcommand(
-            SubCommand::with_name("change")
-                .about("Change an item type.")
-                .arg(Arg::with_name("id").help("The id of the item type you want to edit.").required(true).takes_value(true))
-                .arg(Arg::with_name("name").short("n").long("name").help("Set the new name of this item type.").takes_value(true))
-                .arg(Arg::with_name("minimum quantity").long("min").help("The minimum quantity of this item type you want to have at all times.").takes_value(true))
-                .arg(Arg::with_name("ttl").long("ttl").help("The time to live of this item type once it is opened.").takes_value(true))
-                .arg(Arg::with_name("open by default").long("open-by-default").takes_value(true).value_names(&["true/false"]).help("Whether this item is in the 'opened' state by default. For example fresh food."))
-        )
-        .subcommand(
-            SubCommand::with_name("delete")
-                .about("Delete an item type and all associated item instances.")
-                .arg(Arg::with_name("id").help("The id of the item type you want to delete.").required(true).takes_value(true))
-        )
-        .subcommand(
-            SubCommand::with_name("add")
-                .about("Create an item instance.")
-                .arg(Arg::with_name("item type").required(true).help("The id of the item type.").takes_value(true))
-                .arg(Arg::with_name("quantity").short("q").long("quantity").help("The quantity of this item instance. The unit is unspecified. Defaults to 1.0").takes_value(true))
-                .arg(Arg::with_name("model").long("model").takes_value(true))
-                .arg(Arg::with_name("serial").long("serial").takes_value(true))
-                .arg(Arg::with_name("extra").long("extra").takes_value(true))
-                .arg(Arg::with_name("location").long("location").takes_value(true))
-                .arg(Arg::with_name("value").long("value").takes_value(true))
-                .arg(Arg::with_name("expires at").long("expires-at").takes_value(true))
-        )
-        .subcommand(
-            SubCommand::with_name("edit")
-                .about("Edit an item instance.")
-                .arg(Arg::with_name("id").required(true).help("The id of the item instance.").takes_value(true))
-                .arg(Arg::with_name("quantity").short("q").long("quantity").help("The quantity of this item instance. The unit is unspecified. Defaults to 1.0").takes_value(true))
-                .arg(Arg::with_name("model").long("model").takes_value(true))
-                .arg(Arg::with_name("serial").long("serial").takes_value(true))
-                .arg(Arg::with_name("extra").long("extra").takes_value(true))
-                .arg(Arg::with_name("location").long("location").takes_value(true))
-                .arg(Arg::with_name("value").long("value").takes_value(true))
-                .arg(Arg::with_name("expires at").long("expires-at").takes_value(true))
-                .arg(Arg::with_name("opened at").long("opened-at").takes_value(true))
-        )
-        .subcommand(
-            SubCommand::with_name("use")
-                .about("Use an item instance quantity (and open it if it was not already.) If no quantity remains, the item instance will automagically be trashed.")
-                .arg(Arg::with_name("id").required(true).help("The id of the item instance.").takes_value(true))
-                .arg(Arg::with_name("quantity").short("q").long("quantity").help("The quantity to use of this item instance. The unit is unspecified. Defaults to 1.0").takes_value(true))
-        )
-        .subcommand(
-            SubCommand::with_name("open")
-                .about("Open an item instance if it was not already.")
-                .arg(Arg::with_name("id").required(true).help("The id of the item instance.").takes_value(true))
-        )
-        .subcommand(
-            SubCommand::with_name("trash")
-                .about("Puts an item instance in the trash.")
-                .arg(Arg::with_name("id").required(true).help("The id of the item instance.").takes_value(true))
-        )
-        // ------------------------
-        .subcommand(
-            SubCommand::with_name("list-missing")
-                .about("Lists item types that don't have enough item instances to fill the specified minimal quantity.")
-        )
-        .subcommand(
-            SubCommand::with_name("list-expired")
-                .about("Lists item instances with a non-zero quantity that have expired but have not yet been trashed.")
-        )
-        .get_matches();
     let (mut inventory, types_path, instances_path) =
         load_inventory(&matches).expect("Failed to load the inventory file");
-    exec_subcommand(&matches, &mut inventory);
+    manager.exec(&mut inventory);
     save_inventory(&inventory, types_path, instances_path)
         .expect("Failed to save data to inventory file.");
 }
@@ -302,54 +260,19 @@ pub fn save_inventory(
     Ok(())
 }
 
-pub fn exec_subcommand<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
-    if let (subcommand, Some(matches)) = matches.subcommand() {
-        match subcommand {
-            "create" => create(matches, inventory),
-            "view" => view(matches, inventory),
-            "change" => change(matches, inventory),
-            "delete" => delete(matches, inventory),
-            "add" => add(matches, inventory),
-            "edit" => edit(matches, inventory),
-            "use" => use_instance(matches, inventory),
-            "open" => open(matches, inventory),
-            "trash" => trash(matches, inventory),
-            "list-missing" => print_missing(matches, inventory),
-            "list-expired" => print_expired(matches, inventory),
-            _ => unreachable!(),
-        }
-    }
-}
-
-pub fn create<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn create<'a>(cmd: CreateTypeCommand, inventory: &mut Inventory) {
     let mut new = ItemTypeBuilder::default();
-    new.name(matches.value_of("name").unwrap().to_string());
-    new.minimum_quantity(
-        matches
-            .value_of("minimum quantity")
-            .map(|min| min.parse().expect("Failed to parse minimum quantity")),
-    );
-    new.ttl(matches.value_of("ttl").map(|ttl| {
-        ttl.parse::<humantime::Duration>()
-            .expect("Failed to parse ttl duration")
-            .into()
-    }));
-    new.opened_by_default(
-        matches
-            .value_of("open by default")
-            .map(|open| {
-                open.parse()
-                    .expect("Failed to parse open by default boolean value")
-            })
-            .unwrap_or(false),
-    );
+    new.name(cmd.name);
+    new.minimum_quantity(cmd.minimum_quantity);
+    new.ttl(cmd.ttl.map(|t| t.into()));
+    new.opened_by_default(cmd.open_by_default.unwrap_or(false));
     inventory
         .add_item_type(new.build().unwrap())
         .expect("Failed to insert new item type");
 }
 
-pub fn view<'a>(matches: &ArgMatches<'a>, inventory: &Inventory) {
-    let res = if let Some(name) = matches.value_of("name") {
+pub fn view<'a>(cmd: ReadTypeCommand, inventory: &Inventory) {
+    let res = if let Some(name) = cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
         inventory.item_types.iter().collect::<Vec<_>>()
@@ -364,10 +287,7 @@ pub fn print_item_types(types: &Vec<&ItemType>) {
         table.add_row(row![
             t.id.to_string(),
             t.name.to_string(),
-            match t.minimum_quantity {
-                Some(qty) => qty.to_string(),
-                None => "-".to_string(),
-            },
+            qty.to_string(),
             match t.ttl {
                 Some(ttl) => humantime::format_duration(ttl).to_string(),
                 None => "-".to_string(),
@@ -440,38 +360,19 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory) {
     table.printstd();
 }
 
-pub fn change<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
-    if let Some(mut item_type) = inventory.item_types.iter_mut().find(|t| {
-        t.id == matches
-            .value_of("id")
-            .unwrap()
-            .parse::<u32>()
-            .expect("Invalid id, expected unsigned integer")
-    }) {
-        if let Some(name) = matches.value_of("name") {
+pub fn change<'a>(cmd: UpdateTypeCommand, inventory: &mut Inventory) {
+    if let Some(mut item_type) = inventory.item_types.iter_mut().find(|t| t.id == cmd.id) {
+        if let Some(name) = cmd.name {
             item_type.name = name.to_string();
         }
-        if let Some(min) = matches.value_of("minimum quantity") {
-            if min.is_empty() {
-                item_type.minimum_quantity = None;
-            } else {
-                item_type.minimum_quantity =
-                    Some(min.parse().expect(
-                        "Invalid minimum quantity, expected unsigned integer or empty string",
-                    ));
-            }
+        if let Some(min) = cmd.minimum_quantity {
+            item_type.minimum_quantity = min;
         }
-        if let Some(ttl) = matches.value_of("ttl") {
-            if ttl.is_empty() {
-                item_type.ttl = None;
-            } else {
-                item_type.ttl = Some(ttl.parse::<humantime::Duration>().expect("Failed to parse ttl duration: Expected empty string or humantime-compatible duration.").into());
-            }
+        if let Some(ttl_opt) = cmd.ttl {
+            item_type.ttl = ttl_opt.map(|t| t.into());
         }
-        if let Some(open) = matches.value_of("open by default") {
-            item_type.opened_by_default = open
-                .parse()
-                .expect("Failed to parse open by default: Expected true or false");
+        if let Some(open) = cmd.open_by_default {
+            item_type.opened_by_default = open_by_default;
         }
     } else {
         eprintln!("Could not find an item type with the specified id");
@@ -527,73 +428,30 @@ pub fn add<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
 }
 
 pub fn edit<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
-    if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| {
-        t.id == matches
-            .value_of("id")
-            .unwrap()
-            .parse::<u32>()
-            .expect("Invalid id, expected unsigned integer")
-    }) {
-        if let Some(e) = matches.value_of("quantity") {
-            if e.is_empty() {
-                item_instance.quantity = 0.0;
-            } else {
-                item_instance.quantity = e
-                    .parse()
-                    .expect("Invalid quantity, expected floating point number or empty string");
-            }
+    if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| t.id == cmd.id) {
+        if let Some(e) = cmd.quantity {
+            item_instance.quantity = e;
         }
-        if let Some(e) = matches.value_of("model") {
-            if e.is_empty() {
-                item_instance.model = None;
-            } else {
-                item_instance.model = Some(e.to_string());
-            }
+        if let Some(e) = cmd.model {
+            item_instance.model = e;
         }
-        if let Some(e) = matches.value_of("serial") {
-            if e.is_empty() {
-                item_instance.serial = None;
-            } else {
-                item_instance.serial = Some(e.to_string());
-            }
+        if let Some(e) = cmd.serial {
+            item_instance.serial = e;
         }
-        if let Some(e) = matches.value_of("extra") {
-            if e.is_empty() {
-                item_instance.extra = None;
-            } else {
-                item_instance.extra = Some(e.to_string());
-            }
+        if let Some(e) = cmd.extra {
+            item_instance.extra = e;
         }
-        if let Some(e) = matches.value_of("location") {
-            if e.is_empty() {
-                item_instance.location = None;
-            } else {
-                item_instance.location = Some(e.to_string());
-            }
+        if let Some(e) = cmd.location {
+            item_instance.location = e;
         }
-        if let Some(e) = matches.value_of("value") {
-            if e.is_empty() {
-                item_instance.value = None;
-            } else {
-                item_instance.value = Some(
-                    e.parse()
-                        .expect("Invalid value, expected floating point number or empty string"),
-                );
-            }
+        if let Some(e) = cmd.value {
+            item_instance.value = e;
         }
-        if let Some(e) = matches.value_of("expires-at") {
-            if e.is_empty() {
-                item_instance.expires_at = None;
-            } else {
-                item_instance.expires_at = Some(e.parse::<humantime::Timestamp>().expect("Failed to parse timestamp: Expected empty string or humantime-compatible duration.").into());
-            }
+        if let Some(e) = cmd.expires_at {
+            item_instance.expires_at = e;
         }
-        if let Some(e) = matches.value_of("opened-at") {
-            if e.is_empty() {
-                item_instance.opened_at = None;
-            } else {
-                item_instance.opened_at = Some(e.parse::<humantime::Timestamp>().expect("Failed to parse timestamp: Expected empty string or humantime-compatible duration.").into());
-            }
+        if let Some(e) = cmd.opened_at {
+            item_instance.opened_at = e;
         }
     } else {
         eprintln!("Could not find an item instance with the specified id");
@@ -688,4 +546,3 @@ pub fn print_expired<'a>(_matches: &ArgMatches<'a>, inventory: &mut Inventory) {
         .collect::<Vec<_>>();
     print_item_instances(&v, &inventory);
 }
-
