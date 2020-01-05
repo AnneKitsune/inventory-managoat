@@ -8,7 +8,7 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "Inventory Manager",
+    name = "Inventory Managoat",
     author = "Joël Lupien <jojolepromain@gmail.com>",
     about = "Command line utility to manage your personal inventory."
 )]
@@ -40,13 +40,13 @@ impl Manager {
             Command::UpdateType(cmd) => change(cmd, inventory),
             Command::DeleteType(cmd) => delete(cmd, inventory),
             Command::CreateInstance(cmd) => add(cmd, inventory),
-            Command::ReadInstance(cmd) => edit(cmd, inventory),
-            Command::UpdateInstance(cmd) => {} //use_instance(cmd, inventory),
+            Command::ReadInstance(cmd) => {}//edit(cmd, inventory),
+            Command::UpdateInstance(cmd) => edit(cmd, inventory),
             Command::DeleteInstance(cmd) => {} //open(cmd, inventory),
             Command::ListExpired => print_expired(inventory),
             Command::ListMissing => print_missing(inventory),
-            Command::Use { type_id } => use_instance(type_id, inventory),
-            Command::Trash { instance_id } => trash(instance_id, inventory),
+            Command::Use { type_id, quantity } => use_instance(*type_id, *quantity, inventory),
+            Command::Trash { instance_id } => trash(*instance_id, inventory),
         }
     }
 }
@@ -74,7 +74,7 @@ pub enum Command {
     #[structopt(name = "list-missing")]
     ListMissing,
     #[structopt(name = "use")]
-    Use { type_id: u32 },
+    Use { type_id: u32, quantity: Option<f32>},
     #[structopt(name = "trash")]
     Trash { instance_id: u32 },
 }
@@ -192,7 +192,7 @@ fn main() {
     let manager = Manager::from_args();
     return;
     let (mut inventory, types_path, instances_path) =
-        load_inventory(&matches).expect("Failed to load the inventory file");
+        load_inventory(&manager).expect("Failed to load the inventory file");
     manager.exec(&mut inventory);
     save_inventory(&inventory, types_path, instances_path)
         .expect("Failed to save data to inventory file.");
@@ -206,16 +206,10 @@ pub fn default_workdir() -> PathBuf {
 }
 
 pub fn load_inventory<'a>(
-    matches: &ArgMatches<'a>,
+    manager: &Manager,
 ) -> std::result::Result<(Inventory, PathBuf, PathBuf), std::io::Error> {
-    let name = matches
-        .value_of("inventory name")
-        .unwrap_or("default")
-        .to_string();
-    let workdir = matches
-        .value_of("workdir")
-        .map(|s| PathBuf::from(s))
-        .unwrap_or(default_workdir());
+    let name = manager.inventory_name;
+    let workdir = manager.workdir;
     //let verbosity = matches.occurrences_of("v");
 
     if metadata(workdir.clone()).is_err() {
@@ -260,7 +254,7 @@ pub fn save_inventory(
     Ok(())
 }
 
-pub fn create<'a>(cmd: CreateTypeCommand, inventory: &mut Inventory) {
+pub fn create<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
     let mut new = ItemTypeBuilder::default();
     new.name(cmd.name);
     new.minimum_quantity(cmd.minimum_quantity);
@@ -271,7 +265,7 @@ pub fn create<'a>(cmd: CreateTypeCommand, inventory: &mut Inventory) {
         .expect("Failed to insert new item type");
 }
 
-pub fn view<'a>(cmd: ReadTypeCommand, inventory: &Inventory) {
+pub fn view<'a>(cmd: &ReadTypeCommand, inventory: &Inventory) {
     let res = if let Some(name) = cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
@@ -287,7 +281,7 @@ pub fn print_item_types(types: &Vec<&ItemType>) {
         table.add_row(row![
             t.id.to_string(),
             t.name.to_string(),
-            qty.to_string(),
+            t.minimum_quantity.to_string(),
             match t.ttl {
                 Some(ttl) => humantime::format_duration(ttl).to_string(),
                 None => "-".to_string(),
@@ -360,7 +354,7 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory) {
     table.printstd();
 }
 
-pub fn change<'a>(cmd: UpdateTypeCommand, inventory: &mut Inventory) {
+pub fn change<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
     if let Some(mut item_type) = inventory.item_types.iter_mut().find(|t| t.id == cmd.id) {
         if let Some(name) = cmd.name {
             item_type.name = name.to_string();
@@ -371,7 +365,7 @@ pub fn change<'a>(cmd: UpdateTypeCommand, inventory: &mut Inventory) {
         if let Some(ttl_opt) = cmd.ttl {
             item_type.ttl = ttl_opt.map(|t| t.into());
         }
-        if let Some(open) = cmd.open_by_default {
+        if let Some(open_by_default) = cmd.open_by_default {
             item_type.opened_by_default = open_by_default;
         }
     } else {
@@ -379,104 +373,77 @@ pub fn change<'a>(cmd: UpdateTypeCommand, inventory: &mut Inventory) {
     }
 }
 
-pub fn delete<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn delete<'a>(cmd: &DeleteTypeCommand, inventory: &mut Inventory) {
     inventory.delete_item_type(
-        matches
-            .value_of("id")
-            .unwrap()
-            .parse()
-            .expect("Failed to parse id: Expected unsigned integer"),
+        cmd.id
     );
 }
 
-pub fn add<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn add<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
     let mut new = ItemInstanceBuilder::default();
 
     new.item_type(
-        matches
-            .value_of("item type")
-            .unwrap()
-            .parse()
-            .expect("Failed to parse item id: Expected unsigned integer"),
+        cmd.item_type
     );
-    new.model(matches.value_of("model").map(|e| e.to_string()));
-    new.serial(matches.value_of("serial").map(|e| e.to_string()));
-    new.extra(matches.value_of("extra").map(|e| e.to_string()));
-    new.location(matches.value_of("location").map(|e| e.to_string()));
-    new.value(matches.value_of("value").map(|e| {
-        e.parse()
-            .expect("Failed to parse value: Expected floating point number")
-    }));
+    new.model(cmd.model);
+    new.serial(cmd.serial);
+    new.extra(cmd.extra);
+    new.location(cmd.location);
+    new.value(cmd.value);
     new.quantity(
-        matches
-            .value_of("quantity")
-            .map(|e| {
-                e.parse()
-                    .expect("Failed to parse quantity: Expected floating point number")
-            })
-            .unwrap_or(1.0),
+        cmd.quantity
     );
-    new.expires_at(matches.value_of("expires at").map(|e| {
-        e.parse::<humantime::Timestamp>()
-            .expect("Failed to parse expires at: Invalid humantime-compatible timestamp format")
-            .into()
-    }));
+    new.expires_at(
+        cmd.expires_at.map(|t| t.into())
+    );
 
     inventory
         .add_item_instance(new.build().unwrap())
         .expect("Failed to insert new item type");
 }
 
-pub fn edit<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn edit<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventory) {
     if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| t.id == cmd.id) {
         if let Some(e) = cmd.quantity {
             item_instance.quantity = e;
         }
         if let Some(e) = cmd.model {
-            item_instance.model = e;
+            item_instance.model = Some(e);
         }
         if let Some(e) = cmd.serial {
-            item_instance.serial = e;
+            item_instance.serial = Some(e);
         }
         if let Some(e) = cmd.extra {
-            item_instance.extra = e;
+            item_instance.extra = Some(e);
         }
         if let Some(e) = cmd.location {
-            item_instance.location = e;
+            item_instance.location = Some(e);
         }
         if let Some(e) = cmd.value {
-            item_instance.value = e;
+            item_instance.value = Some(e);
         }
         if let Some(e) = cmd.expires_at {
-            item_instance.expires_at = e;
+            item_instance.expires_at = e.map(|t| t.into());
         }
         if let Some(e) = cmd.opened_at {
-            item_instance.opened_at = e;
+            item_instance.opened_at = e.map(|t| t.into());
         }
     } else {
         eprintln!("Could not find an item instance with the specified id");
     }
 }
 
-pub fn use_instance<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inventory) {
     if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| {
-        t.id == matches
-            .value_of("id")
-            .unwrap()
-            .parse::<u32>()
-            .expect("Invalid id, expected unsigned integer")
+        t.id == type_id
     }) {
-        if let Some(e) = matches.value_of("quantity") {
-            if e.is_empty() {
-                item_instance.quantity -= 1.0;
-            } else {
-                item_instance.quantity = item_instance.quantity
-                    - e.parse::<f32>()
-                        .expect("Invalid quantity, expected floating point number or empty string");
-                if item_instance.quantity < 0.0 {
-                    item_instance.quantity = 0.0;
-                }
+        if let Some(e) = quantity {
+            item_instance.quantity = item_instance.quantity - e;
+            if item_instance.quantity < 0.0 {
+                item_instance.quantity = 0.0;
             }
+        } else {
+            item_instance.quantity -= 1.0;
         }
     } else {
         eprintln!("Could not find an item instance with the specified id");
@@ -497,13 +464,9 @@ pub fn open<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
     }
 }
 
-pub fn trash<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
     if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| {
-        t.id == matches
-            .value_of("id")
-            .unwrap()
-            .parse::<u32>()
-            .expect("Invalid id, expected unsigned integer")
+        t.id == instance_id
     }) {
         item_instance.alive = false;
     } else {
@@ -511,28 +474,23 @@ pub fn trash<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
     }
 }
 
-pub fn print_missing<'a>(_matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn print_missing<'a>(inventory: &mut Inventory) {
     let v = inventory
         .item_instances
         .iter()
         .filter(|t| {
-            if let Some(min) = inventory
+            t.quantity < inventory
                 .item_types
                 .iter()
                 .find(|it| it.id == t.item_type)
                 .expect("Failed to find item type for item instance")
                 .minimum_quantity
-            {
-                t.quantity < min
-            } else {
-                false
-            }
         })
         .collect::<Vec<_>>();
     print_item_instances(&v, &inventory);
 }
 
-pub fn print_expired<'a>(_matches: &ArgMatches<'a>, inventory: &mut Inventory) {
+pub fn print_expired<'a>(inventory: &mut Inventory) {
     let v = inventory
         .item_instances
         .iter()
