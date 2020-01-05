@@ -53,21 +53,21 @@ impl Manager {
 
 #[derive(StructOpt, Debug)]
 pub enum Command {
-    #[structopt(name = "ct", flatten)]
+    #[structopt(name = "ct")]
     CreateType(CreateTypeCommand),
-    #[structopt(name = "rt", flatten)]
+    #[structopt(name = "rt")]
     ReadType(ReadTypeCommand),
-    #[structopt(name = "ut", flatten)]
+    #[structopt(name = "ut")]
     UpdateType(UpdateTypeCommand),
-    #[structopt(name = "dt", flatten)]
+    #[structopt(name = "dt")]
     DeleteType(DeleteTypeCommand),
-    #[structopt(name = "ci", flatten)]
+    #[structopt(name = "ci")]
     CreateInstance(CreateInstanceCommand),
-    #[structopt(name = "ri", flatten)]
+    #[structopt(name = "ri")]
     ReadInstance(ReadInstanceCommand),
-    #[structopt(name = "ui", flatten)]
+    #[structopt(name = "ui")]
     UpdateInstance(UpdateInstanceCommand),
-    #[structopt(name = "di", flatten)]
+    #[structopt(name = "di")]
     DeleteInstance(DeleteInstanceCommand),
     #[structopt(name = "list-expired")]
     ListExpired,
@@ -208,8 +208,8 @@ pub fn default_workdir() -> PathBuf {
 pub fn load_inventory<'a>(
     manager: &Manager,
 ) -> std::result::Result<(Inventory, PathBuf, PathBuf), std::io::Error> {
-    let name = manager.inventory_name;
-    let workdir = manager.workdir;
+    let name = manager.inventory_name.clone();
+    let workdir = &manager.workdir;
     //let verbosity = matches.occurrences_of("v");
 
     if metadata(workdir.clone()).is_err() {
@@ -256,7 +256,7 @@ pub fn save_inventory(
 
 pub fn create<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
     let mut new = ItemTypeBuilder::default();
-    new.name(cmd.name);
+    new.name(cmd.name.clone());
     new.minimum_quantity(cmd.minimum_quantity);
     new.ttl(cmd.ttl.map(|t| t.into()));
     new.opened_by_default(cmd.open_by_default.unwrap_or(false));
@@ -266,7 +266,7 @@ pub fn create<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
 }
 
 pub fn view<'a>(cmd: &ReadTypeCommand, inventory: &Inventory) {
-    let res = if let Some(name) = cmd.name {
+    let res = if let Some(name) = &cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
         inventory.item_types.iter().collect::<Vec<_>>()
@@ -356,7 +356,7 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory) {
 
 pub fn change<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
     if let Some(mut item_type) = inventory.item_types.iter_mut().find(|t| t.id == cmd.id) {
-        if let Some(name) = cmd.name {
+        if let Some(name) = &cmd.name {
             item_type.name = name.to_string();
         }
         if let Some(min) = cmd.minimum_quantity {
@@ -385,16 +385,16 @@ pub fn add<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
     new.item_type(
         cmd.item_type
     );
-    new.model(cmd.model);
-    new.serial(cmd.serial);
-    new.extra(cmd.extra);
-    new.location(cmd.location);
+    new.model(cmd.model.clone());
+    new.serial(cmd.serial.clone());
+    new.extra(cmd.extra.clone());
+    new.location(cmd.location.clone());
     new.value(cmd.value);
     new.quantity(
         cmd.quantity
     );
     new.expires_at(
-        cmd.expires_at.map(|t| t.into())
+        cmd.expires_at.clone().map(|t| t.into())
     );
 
     inventory
@@ -407,26 +407,26 @@ pub fn edit<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventory) {
         if let Some(e) = cmd.quantity {
             item_instance.quantity = e;
         }
-        if let Some(e) = cmd.model {
-            item_instance.model = Some(e);
+        if let Some(e) = &cmd.model {
+            item_instance.model = Some(e.clone());
         }
-        if let Some(e) = cmd.serial {
-            item_instance.serial = Some(e);
+        if let Some(e) = &cmd.serial {
+            item_instance.serial = Some(e.clone());
         }
-        if let Some(e) = cmd.extra {
-            item_instance.extra = Some(e);
+        if let Some(e) = &cmd.extra {
+            item_instance.extra = Some(e.clone());
         }
-        if let Some(e) = cmd.location {
-            item_instance.location = Some(e);
+        if let Some(e) = &cmd.location {
+            item_instance.location = Some(e.clone());
         }
-        if let Some(e) = cmd.value {
-            item_instance.value = Some(e);
+        if let Some(e) = &cmd.value {
+            item_instance.value = Some(e.clone());
         }
-        if let Some(e) = cmd.expires_at {
-            item_instance.expires_at = e.map(|t| t.into());
+        if let Some(e) = &cmd.expires_at {
+            item_instance.expires_at = e.clone().map(|t| t.into());
         }
-        if let Some(e) = cmd.opened_at {
-            item_instance.opened_at = e.map(|t| t.into());
+        if let Some(e) = &cmd.opened_at {
+            item_instance.opened_at = e.clone().map(|t| t.into());
         }
     } else {
         eprintln!("Could not find an item instance with the specified id");
