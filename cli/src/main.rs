@@ -16,13 +16,13 @@ pub struct Manager {
     /// Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to \"inventory\".
     #[structopt(name = "name", short, long, default_value = "default")]
     pub inventory_name: String,
-    // TODO: this doesn't actually call default_workdir?
     /// The directory to use to load and save the inventory files.
-    #[structopt(short, long, default_value = "default_workdir()")]
-    pub workdir: PathBuf,
+    #[structopt(short, long)]
+    pub workdir: Option<PathBuf>,
     #[structopt(short, long)]
     pub minimal: bool,
     #[structopt(short, long)]
+    // TODO
     pub fields: Option<Vec<String>>,
     #[structopt(short, long)]
     pub interactive: bool,
@@ -33,6 +33,12 @@ pub struct Manager {
 }
 
 impl Manager {
+    pub fn fix_workdir(&mut self) {
+        if self.workdir.is_none() {
+            self.workdir = Some(default_workdir());
+        }
+    }
+
     pub fn exec(&self, inventory: &mut Inventory) {
         match &self.command {
             Command::CreateType(cmd) => create(cmd, inventory),
@@ -105,6 +111,8 @@ pub struct ReadTypeCommand {
     #[structopt(short, long)]
     name: Option<String>,
     // TODO
+    #[structopt(short, long)]
+    missing: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -155,7 +163,14 @@ pub struct CreateInstanceCommand {
 #[derive(StructOpt, Debug)]
 pub struct ReadInstanceCommand {
     /// The id of the item type.
+    #[structopt(short, long)]
     id: Option<u32>,
+    #[structopt(short, long)]
+    type_id: Option<u32>,
+    #[structopt(long)]
+    type_name: Option<String>,
+    #[structopt(short, long)]
+    expired: bool,
     // TODO
 }
 
@@ -189,8 +204,8 @@ pub struct DeleteInstanceCommand {
 }
 
 fn main() {
-    let manager = Manager::from_args();
-    return;
+    let mut manager = Manager::from_args();
+    manager.fix_workdir();
     let (mut inventory, types_path, instances_path) =
         load_inventory(&manager).expect("Failed to load the inventory file");
     manager.exec(&mut inventory);
@@ -209,7 +224,7 @@ pub fn load_inventory<'a>(
     manager: &Manager,
 ) -> std::result::Result<(Inventory, PathBuf, PathBuf), std::io::Error> {
     let name = manager.inventory_name.clone();
-    let workdir = &manager.workdir;
+    let workdir = manager.workdir.as_ref().expect("Manager::fix_workdir wasn't called before this point.");
     //let verbosity = matches.occurrences_of("v");
 
     if metadata(workdir.clone()).is_err() {
@@ -223,10 +238,8 @@ pub fn load_inventory<'a>(
 
     if let (Ok(types), Ok(instances)) = (read(&types_path), read(&instances_path)) {
         // deserialize
-        //let item_types = csv::ReaderBuilder::new().delimiter(';' as u8).from_reader(types.as_slice()).deserialize().map(|entry| entry.expect("failed to deserialize entry")).collect::<Vec<_>>();
         let item_types =
-            serde_json::from_reader(types.as_slice()).expect("Failed to deserialize type json");
-        //let item_instances = csv::ReaderBuilder::new().delimiter(';' as u8).from_reader(instances.as_slice()).deserialize().map(|entry| entry.expect("failed to deserialize entry")).collect::<Vec<_>>();
+            serde_json::from_reader(types.as_slice()).expect("Failed to deserialize types json");
         let item_instances = serde_json::from_reader(instances.as_slice())
             .expect("Failed to deserialize instances json");
         Ok((
