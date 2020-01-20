@@ -41,13 +41,13 @@ impl Manager {
 
     pub fn exec(&self, inventory: &mut Inventory) {
         match &self.command {
-            Command::CreateType(cmd) => create(cmd, inventory),
-            Command::ReadType(cmd) => view(cmd, inventory),
-            Command::UpdateType(cmd) => change(cmd, inventory),
-            Command::DeleteType(cmd) => delete(cmd, inventory),
-            Command::CreateInstance(cmd) => add(cmd, inventory),
+            Command::CreateType(cmd) => create_type(cmd, inventory),
+            Command::ReadType(cmd) => read_type(cmd, inventory),
+            Command::UpdateType(cmd) => update_type(cmd, inventory),
+            Command::DeleteType(cmd) => delete_type(cmd, inventory),
+            Command::CreateInstance(cmd) => create_instance(cmd, inventory),
             Command::ReadInstance(cmd) => {}//edit(cmd, inventory),
-            Command::UpdateInstance(cmd) => edit(cmd, inventory),
+            Command::UpdateInstance(cmd) => update_instance(cmd, inventory),
             Command::DeleteInstance(cmd) => {} //open(cmd, inventory),
             Command::ListExpired => print_expired(inventory),
             Command::ListMissing => print_missing(inventory),
@@ -267,7 +267,7 @@ pub fn save_inventory(
     Ok(())
 }
 
-pub fn create<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
+pub fn create_type<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
     let mut new = ItemTypeBuilder::default();
     new.name(cmd.name.clone());
     new.minimum_quantity(cmd.minimum_quantity);
@@ -278,7 +278,16 @@ pub fn create<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
         .expect("Failed to insert new item type");
 }
 
-pub fn view<'a>(cmd: &ReadTypeCommand, inventory: &Inventory) {
+pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory) {
+    let res = if let Some(name) = &cmd.name {
+        inventory.get_types_for_name(&name.to_string())
+    } else {
+        inventory.item_types.iter().collect::<Vec<_>>()
+    };
+    print_item_types(&res);
+}
+
+pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory) {
     let res = if let Some(name) = &cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
@@ -367,7 +376,7 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory) {
     table.printstd();
 }
 
-pub fn change<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
+pub fn update_type<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
     if let Some(mut item_type) = inventory.item_types.iter_mut().find(|t| t.id == cmd.id) {
         if let Some(name) = &cmd.name {
             item_type.name = name.to_string();
@@ -386,13 +395,11 @@ pub fn change<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
     }
 }
 
-pub fn delete<'a>(cmd: &DeleteTypeCommand, inventory: &mut Inventory) {
-    inventory.delete_item_type(
-        cmd.id
-    );
+pub fn delete_type<'a>(cmd: &DeleteTypeCommand, inventory: &mut Inventory) {
+    inventory.delete_item_type(cmd.id);
 }
 
-pub fn add<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
+pub fn create_instance<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
     let mut new = ItemInstanceBuilder::default();
 
     new.item_type(
@@ -415,7 +422,7 @@ pub fn add<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
         .expect("Failed to insert new item type");
 }
 
-pub fn edit<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventory) {
+pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventory) {
     if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| t.id == cmd.id) {
         if let Some(e) = cmd.quantity {
             item_instance.quantity = e;
@@ -517,3 +524,4 @@ pub fn print_expired<'a>(inventory: &mut Inventory) {
         .collect::<Vec<_>>();
     print_item_instances(&v, &inventory);
 }
+
