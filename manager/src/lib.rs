@@ -50,7 +50,8 @@ pub struct ItemInstance {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum UseState {
-    New, Used
+    New,
+    Used,
 }
 
 impl Default for UseState {
@@ -73,7 +74,10 @@ impl Inventory {
         Ok(())
     }
 
-    pub fn add_item_instance(&mut self, mut item_instance: ItemInstance) -> Result<(), InventoryError> {
+    pub fn add_item_instance(
+        &mut self,
+        mut item_instance: ItemInstance,
+    ) -> Result<(), InventoryError> {
         let free_id = self.free_instance_id();
         item_instance.id = free_id;
         if !self.has_item_type(item_instance.item_type) {
@@ -104,7 +108,11 @@ impl Inventory {
         if !self.has_item_type(id) {
             return Err(InventoryError::UnknownItemType);
         }
-        Ok(self.item_instances.iter().filter(|inst| inst.item_type == id).collect::<Vec<_>>())
+        Ok(self
+            .item_instances
+            .iter()
+            .filter(|inst| inst.item_type == id)
+            .collect::<Vec<_>>())
     }
 
     fn has_item_type(&self, id: u32) -> bool {
@@ -112,15 +120,24 @@ impl Inventory {
     }
 
     fn free_type_id(&self) -> u32 {
-        self.item_types.iter().fold(0, |accum, ty| if ty.id > accum { ty.id } else { accum }) + 1
+        self.item_types
+            .iter()
+            .fold(0, |accum, ty| if ty.id > accum { ty.id } else { accum })
+            + 1
     }
 
     fn free_instance_id(&self) -> u32 {
-        self.item_instances.iter().fold(0, |accum, ty| if ty.id > accum { ty.id } else { accum }) + 1
+        self.item_instances
+            .iter()
+            .fold(0, |accum, ty| if ty.id > accum { ty.id } else { accum })
+            + 1
     }
 
     pub fn get_types_for_name(&self, name: &String) -> Vec<&ItemType> {
-        self.item_types.iter().filter(|t| t.name.to_lowercase().contains(&name.to_lowercase())).collect::<Vec<_>>()
+        self.item_types
+            .iter()
+            .filter(|t| t.name.to_lowercase().contains(&name.to_lowercase()))
+            .collect::<Vec<_>>()
     }
 }
 
@@ -136,8 +153,16 @@ mod tests {
     #[test]
     fn write_inventory() {
         let mut inv = Inventory::default();
-        let ty = ItemTypeBuilder::default().id(1).name("thonk type, still the type".to_string()).build().unwrap();
-        let is = ItemInstanceBuilder::default().item_type(ty.id).model(Some("some composit,e model".to_string())).build().unwrap();
+        let ty = ItemTypeBuilder::default()
+            .id(1)
+            .name("thonk type, still the type".to_string())
+            .build()
+            .unwrap();
+        let is = ItemInstanceBuilder::default()
+            .item_type(ty.id)
+            .model(Some("some composit,e model".to_string()))
+            .build()
+            .unwrap();
         inv.item_types.push(ty);
         inv.item_instances.push(is);
         let mut wtr = csv::Writer::from_writer(std::io::stdout());

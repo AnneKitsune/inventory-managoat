@@ -46,7 +46,7 @@ impl Manager {
             Command::UpdateType(cmd) => update_type(cmd, inventory),
             Command::DeleteType(cmd) => delete_type(cmd, inventory),
             Command::CreateInstance(cmd) => create_instance(cmd, inventory),
-            Command::ReadInstance(cmd) => {}//edit(cmd, inventory),
+            Command::ReadInstance(cmd) => {} //edit(cmd, inventory),
             Command::UpdateInstance(cmd) => update_instance(cmd, inventory),
             Command::DeleteInstance(cmd) => {} //open(cmd, inventory),
             Command::ListExpired => print_expired(inventory),
@@ -80,7 +80,7 @@ pub enum Command {
     #[structopt(name = "list-missing")]
     ListMissing,
     #[structopt(name = "use")]
-    Use { type_id: u32, quantity: Option<f32>},
+    Use { type_id: u32, quantity: Option<f32> },
     #[structopt(name = "trash")]
     Trash { instance_id: u32 },
 }
@@ -224,7 +224,10 @@ pub fn load_inventory<'a>(
     manager: &Manager,
 ) -> std::result::Result<(Inventory, PathBuf, PathBuf), std::io::Error> {
     let name = manager.inventory_name.clone();
-    let workdir = manager.workdir.as_ref().expect("Manager::fix_workdir wasn't called before this point.");
+    let workdir = manager
+        .workdir
+        .as_ref()
+        .expect("Manager::fix_workdir wasn't called before this point.");
     //let verbosity = matches.occurrences_of("v");
 
     if metadata(workdir.clone()).is_err() {
@@ -402,20 +405,14 @@ pub fn delete_type<'a>(cmd: &DeleteTypeCommand, inventory: &mut Inventory) {
 pub fn create_instance<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
     let mut new = ItemInstanceBuilder::default();
 
-    new.item_type(
-        cmd.item_type
-    );
+    new.item_type(cmd.item_type);
     new.model(cmd.model.clone());
     new.serial(cmd.serial.clone());
     new.extra(cmd.extra.clone());
     new.location(cmd.location.clone());
     new.value(cmd.value);
-    new.quantity(
-        cmd.quantity
-    );
-    new.expires_at(
-        cmd.expires_at.clone().map(|t| t.into())
-    );
+    new.quantity(cmd.quantity);
+    new.expires_at(cmd.expires_at.clone().map(|t| t.into()));
 
     inventory
         .add_item_instance(new.build().unwrap())
@@ -454,9 +451,11 @@ pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventor
 }
 
 pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inventory) {
-    if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| {
-        t.id == type_id
-    }) {
+    if let Some(mut item_instance) = inventory
+        .item_instances
+        .iter_mut()
+        .find(|t| t.id == type_id)
+    {
         if let Some(e) = quantity {
             item_instance.quantity = item_instance.quantity - e;
             if item_instance.quantity < 0.0 {
@@ -485,9 +484,11 @@ pub fn open<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
 }
 
 pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
-    if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| {
-        t.id == instance_id
-    }) {
+    if let Some(mut item_instance) = inventory
+        .item_instances
+        .iter_mut()
+        .find(|t| t.id == instance_id)
+    {
         item_instance.alive = false;
     } else {
         eprintln!("Could not find an item instance with the specified id");
@@ -499,12 +500,13 @@ pub fn print_missing<'a>(inventory: &mut Inventory) {
         .item_instances
         .iter()
         .filter(|t| {
-            t.quantity < inventory
-                .item_types
-                .iter()
-                .find(|it| it.id == t.item_type)
-                .expect("Failed to find item type for item instance")
-                .minimum_quantity
+            t.quantity
+                < inventory
+                    .item_types
+                    .iter()
+                    .find(|it| it.id == t.item_type)
+                    .expect("Failed to find item type for item instance")
+                    .minimum_quantity
         })
         .collect::<Vec<_>>();
     print_item_instances(&v, &inventory);
@@ -524,4 +526,3 @@ pub fn print_expired<'a>(inventory: &mut Inventory) {
         .collect::<Vec<_>>();
     print_item_instances(&v, &inventory);
 }
-
