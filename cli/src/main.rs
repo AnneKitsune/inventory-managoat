@@ -21,20 +21,8 @@ pub struct Manager {
     #[structopt(short, long)]
     pub workdir: Option<PathBuf>,
     /// Enables printing of the data without creating pretty tables.
-    /// TODO
     #[structopt(short, long)]
     pub minimal: bool,
-    /// Specify which fields should be printed.
-    /// TODO
-    #[structopt(short, long)]
-    pub fields: Option<Vec<String>>,
-    /// Enables interactive mode using curses.
-    /// TODO
-    #[structopt(short, long)]
-    pub interactive: bool,
-    /// Enables quiet mode. Disables all output.
-    #[structopt(short, long)]
-    pub quiet: bool,
     /// The action to execute on the inventory.
     #[structopt(subcommand)]
     pub command: Command,
@@ -52,15 +40,15 @@ impl Manager {
     pub fn exec(&self, inventory: &mut Inventory) {
         match &self.command {
             Command::CreateType(cmd) => create_type(cmd, inventory),
-            Command::ReadType(cmd) => read_type(cmd, inventory),
+            Command::ReadType(cmd) => read_type(cmd, inventory, self.minimal),
             Command::UpdateType(cmd) => update_type(cmd, inventory),
             Command::DeleteType(cmd) => delete_type(cmd, inventory),
             Command::CreateInstance(cmd) => create_instance(cmd, inventory),
-            Command::ReadInstance(cmd) => read_instance(cmd, inventory),
+            Command::ReadInstance(cmd) => read_instance(cmd, inventory, self.minimal),
             Command::UpdateInstance(cmd) => update_instance(cmd, inventory),
             Command::DeleteInstance(cmd) => delete_instance(cmd, inventory),
-            Command::ListExpired => print_expired(inventory),
-            Command::ListMissing => print_missing(inventory),
+            Command::ListExpired => print_expired(inventory, self.minimal),
+            Command::ListMissing => print_missing(inventory, self.minimal),
             Command::Use { type_id, quantity } => use_instance(*type_id, *quantity, inventory),
             Command::Trash { instance_id } => trash(*instance_id, inventory),
         }
@@ -328,16 +316,16 @@ pub fn create_type<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
         .expect("Failed to insert new item type");
 }
 
-pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory) {
+pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool) {
     let res = if let Some(name) = &cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
         inventory.item_types.iter().collect::<Vec<_>>()
     };
-    print_item_types(&res);
+    print_item_types(&res, minimal);
 }
 
-pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory) {
+pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minimal: bool) {
     let mut instances = if let Some(id) = cmd.id {
         inventory.item_instances.iter().filter(|ii| ii.id == id).collect::<Vec<_>>()
     } else if let Some(type_id) = cmd.type_id {
@@ -359,12 +347,16 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory) {
             }
         });
     }
-    print_item_instances(&instances, inventory);
+    print_item_instances(&instances, inventory, minimal);
 }
 
-pub fn print_item_types(types: &Vec<&ItemType>) {
+pub fn print_item_types(types: &Vec<&ItemType>, minimal: bool) {
     let mut table = Table::new();
-    table.add_row(row!["id", "name", "min", "ttl", "open default"]);
+    if minimal {
+        table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
+    } else {
+        table.add_row(row!["id", "name", "min", "ttl", "open default"]);
+    }
     types.iter().for_each(|t| {
         table.add_row(row![
             t.id.to_string(),
@@ -380,20 +372,24 @@ pub fn print_item_types(types: &Vec<&ItemType>) {
     table.printstd();
 }
 
-pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory) {
+pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, minimal: bool) {
     let mut table = Table::new();
-    table.add_row(row![
-        "id",
-        "(id)item type",
-        "quantity",
-        "model",
-        "serial",
-        "extra",
-        "location",
-        "value",
-        "opened at",
-        "expires at"
-    ]);
+    if minimal {
+        table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
+    } else {
+        table.add_row(row![
+            "id",
+            "(id)item type",
+            "quantity",
+            "model",
+            "serial",
+            "extra",
+            "location",
+            "value",
+            "opened at",
+            "expires at"
+        ]);
+    }
     instances.iter().for_each(|t| {
         let item_type_str = format!(
             "({}){}",
@@ -563,7 +559,7 @@ pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
     }
 }
 
-pub fn print_missing<'a>(inventory: &mut Inventory) {
+pub fn print_missing<'a>(inventory: &mut Inventory, minimal: bool) {
     let v = inventory
         .item_instances
         .iter()
@@ -577,10 +573,10 @@ pub fn print_missing<'a>(inventory: &mut Inventory) {
                     .minimum_quantity
         })
         .collect::<Vec<_>>();
-    print_item_instances(&v, &inventory);
+    print_item_instances(&v, &inventory, minimal);
 }
 
-pub fn print_expired<'a>(inventory: &mut Inventory) {
+pub fn print_expired<'a>(inventory: &mut Inventory, minimal: bool) {
     let v = inventory
         .item_instances
         .iter()
@@ -592,5 +588,5 @@ pub fn print_expired<'a>(inventory: &mut Inventory) {
             }
         })
         .collect::<Vec<_>>();
-    print_item_instances(&v, &inventory);
+    print_item_instances(&v, &inventory, minimal);
 }

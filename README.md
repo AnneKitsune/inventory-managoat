@@ -29,20 +29,11 @@ which will show all available options. Alternatively, read the rest of this page
 --h, --help
 Prints help information
 
---i, --interactive
-Enables interactive mode using curses. TODO
-
 --m, --minimal
-Enables printing of the data without creating pretty tables. TODO
-
---q, --quiet
-Enables quiet mode. Disables all output
+Enables printing of the data without creating pretty tables.
 
 --V, --version
 Prints version information
-
---f, --fields \<fields\>...
-Specify which fields should be printed. TODO
 
 --n, --name \<name\>
 Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to "inventory".
