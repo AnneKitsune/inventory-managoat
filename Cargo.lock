@@ -325,6 +325,7 @@ version = "0.1.0"
 dependencies = [
  "csv",
  "derive_builder",
+ "humantime",
  "serde",
 ]
 

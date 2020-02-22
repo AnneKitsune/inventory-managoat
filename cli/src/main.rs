@@ -123,16 +123,11 @@ pub struct CreateTypeCommand {
 #[derive(StructOpt, Debug)]
 pub struct ReadTypeCommand {
     /// The id of the item type you want to view.
-    /// TODO
     #[structopt(short, long)]
     id: Option<u32>,
     /// The name of the item type you want to view.
     #[structopt(short, long)]
     name: Option<String>,
-    /// Print only the types that have missing items.
-    /// TODO
-    #[structopt(short, long)]
-    missing: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -317,7 +312,9 @@ pub fn create_type<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
 }
 
 pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool) {
-    let res = if let Some(name) = &cmd.name {
+    let res = if let Some(id) = &cmd.id {
+        inventory.item_types.iter().find(|it| it.id == *id).map(|it| vec![it]).unwrap_or(vec![])
+    } else if let Some(name) = &cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
         inventory.item_types.iter().collect::<Vec<_>>()
@@ -351,32 +348,32 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
 }
 
 pub fn print_item_types(types: &Vec<&ItemType>, minimal: bool) {
-    let mut table = Table::new();
     if minimal {
-        table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
+        types.iter().for_each(|it| println!("{}", it));
     } else {
+        let mut table = Table::new();
         table.add_row(row!["id", "name", "min", "ttl", "open default"]);
+        types.iter().for_each(|t| {
+            table.add_row(row![
+                t.id.to_string(),
+                t.name.to_string(),
+                t.minimum_quantity.to_string(),
+                match t.ttl {
+                    Some(ttl) => humantime::format_duration(ttl).to_string(),
+                    None => "-".to_string(),
+                },
+                t.opened_by_default.to_string()
+            ]);
+        });
+        table.printstd();
     }
-    types.iter().for_each(|t| {
-        table.add_row(row![
-            t.id.to_string(),
-            t.name.to_string(),
-            t.minimum_quantity.to_string(),
-            match t.ttl {
-                Some(ttl) => humantime::format_duration(ttl).to_string(),
-                None => "-".to_string(),
-            },
-            t.opened_by_default.to_string()
-        ]);
-    });
-    table.printstd();
 }
 
 pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, minimal: bool) {
-    let mut table = Table::new();
     if minimal {
-        table.set_format(*prettytable::format::consts::FORMAT_CLEAN);
+        instances.iter().for_each(|ii| println!("{}", ii));
     } else {
+        let mut table = Table::new();
         table.add_row(row![
             "id",
             "(id)item type",
@@ -389,53 +386,53 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, min
             "opened at",
             "expires at"
         ]);
+        instances.iter().for_each(|t| {
+            let item_type_str = format!(
+                "({}){}",
+                t.item_type.to_string(),
+                inv.item_types
+                    .iter()
+                    .find(|ty| ty.id == t.item_type)
+                    .expect("Failed to find item type for item instance")
+                    .name
+            )
+            .to_string();
+            table.add_row(row![
+                t.id.to_string(),
+                item_type_str,
+                t.quantity.to_string(),
+                match &t.model {
+                    Some(model) => model.to_string(),
+                    None => "-".to_string(),
+                },
+                match &t.serial {
+                    Some(serial) => serial.to_string(),
+                    None => "-".to_string(),
+                },
+                match &t.extra {
+                    Some(extra) => extra.to_string(),
+                    None => "-".to_string(),
+                },
+                match &t.location {
+                    Some(location) => location.to_string(),
+                    None => "-".to_string(),
+                },
+                match t.value {
+                    Some(value) => value.to_string(),
+                    None => "-".to_string(),
+                },
+                match t.opened_at {
+                    Some(open) => humantime::format_rfc3339(open).to_string(),
+                    None => "-".to_string(),
+                },
+                match t.expires_at {
+                    Some(exp) => humantime::format_rfc3339(exp).to_string(),
+                    None => "-".to_string(),
+                },
+            ]);
+        });
+        table.printstd();
     }
-    instances.iter().for_each(|t| {
-        let item_type_str = format!(
-            "({}){}",
-            t.item_type.to_string(),
-            inv.item_types
-                .iter()
-                .find(|ty| ty.id == t.item_type)
-                .expect("Failed to find item type for item instance")
-                .name
-        )
-        .to_string();
-        table.add_row(row![
-            t.id.to_string(),
-            item_type_str,
-            t.quantity.to_string(),
-            match &t.model {
-                Some(model) => model.to_string(),
-                None => "-".to_string(),
-            },
-            match &t.serial {
-                Some(serial) => serial.to_string(),
-                None => "-".to_string(),
-            },
-            match &t.extra {
-                Some(extra) => extra.to_string(),
-                None => "-".to_string(),
-            },
-            match &t.location {
-                Some(location) => location.to_string(),
-                None => "-".to_string(),
-            },
-            match t.value {
-                Some(value) => value.to_string(),
-                None => "-".to_string(),
-            },
-            match t.opened_at {
-                Some(open) => humantime::format_rfc3339(open).to_string(),
-                None => "-".to_string(),
-            },
-            match t.expires_at {
-                Some(exp) => humantime::format_rfc3339(exp).to_string(),
-                None => "-".to_string(),
-            },
-        ]);
-    });
-    table.printstd();
 }
 
 pub fn update_type<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
@@ -560,20 +557,13 @@ pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
 }
 
 pub fn print_missing<'a>(inventory: &mut Inventory, minimal: bool) {
-    let v = inventory
-        .item_instances
+    let types = inventory
+        .item_types
         .iter()
         .filter(|t| {
-            t.quantity
-                < inventory
-                    .item_types
-                    .iter()
-                    .find(|it| it.id == t.item_type)
-                    .expect("Failed to find item type for item instance")
-                    .minimum_quantity
-        })
-        .collect::<Vec<_>>();
-    print_item_instances(&v, &inventory, minimal);
+            inventory.item_instances.iter().filter(|ii| ii.item_type == t.id).map(|ii| ii.quantity).fold(0.0, |accum, e| accum + e) < t.minimum_quantity
+        }).collect::<Vec<_>>();
+    print_item_types(&types, minimal);
 }
 
 pub fn print_expired<'a>(inventory: &mut Inventory, minimal: bool) {
