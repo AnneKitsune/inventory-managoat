@@ -2,7 +2,7 @@
 A Simple Command Line Based Inventory Manager.
 
 ## Basic Usage
-inventory_managoat [FLAGS] [OPTIONS] \<SUBCOMMAND\>
+inv [FLAGS] [OPTIONS] \<SUBCOMMAND\>
 
 ## Author
 This software was written by Jojolepro. Documentation was reviewed by Nikekson.
@@ -19,8 +19,8 @@ and finally the options specific to that subcommand.
 
 For a full usage description, use
 ```
-inventory_managoat --help
-inventory_managoat <SUBCOMMAND> --help
+inv --help
+inv <SUBCOMMAND> --help
 ```
 which will show all available options. Alternatively, read the rest of this page, which contains all the non subcommand-specific options.
 
@@ -80,6 +80,21 @@ use          - Use some quantity from an item type
 
 ## CUSTOMIZATION
 Inventory Managoat is customized by specifying command line options or modifying the source code/patching in features according to your needs.
+
+## BUILD
+First, install rust (via rustup).
+Then:
+```
+git clone https://github.com/jojolepro/inventory-managoat
+cd inventory-managoat
+
+# Debug build - for developement
+cargo build --release
+
+# Release build - for general usage
+cargo build --release
+strip target/release/inv
+```
 
 ## ISSUES
 See https://github.com/jojolepro/inventory-managoat/issues
