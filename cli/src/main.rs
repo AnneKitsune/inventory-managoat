@@ -13,32 +13,42 @@ use structopt::StructOpt;
     about = "Command line utility to manage your personal inventory."
 )]
 pub struct Manager {
-    /// Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to \"inventory\".
-    #[structopt(name = "name", short, long, default_value = "default")]
+    /// Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to "inventory".
+    #[structopt(name = "name", short, long, default_value = "inventory")]
     pub inventory_name: String,
     /// The directory to use to load and save the inventory files.
+    /// Defaults to the default configuration directory of your user.
     #[structopt(short, long)]
     pub workdir: Option<PathBuf>,
+    /// Enables printing of the data without creating pretty tables.
+    /// TODO
     #[structopt(short, long)]
     pub minimal: bool,
+    /// Specify which fields should be printed.
+    /// TODO
     #[structopt(short, long)]
-    // TODO
     pub fields: Option<Vec<String>>,
+    /// Enables interactive mode using curses.
+    /// TODO
     #[structopt(short, long)]
     pub interactive: bool,
+    /// Enables quiet mode. Disables all output.
     #[structopt(short, long)]
     pub quiet: bool,
+    /// The action to execute on the inventory.
     #[structopt(subcommand)]
     pub command: Command,
 }
 
 impl Manager {
+    /// Assign a default working directory if none is specified.
     pub fn fix_workdir(&mut self) {
         if self.workdir.is_none() {
             self.workdir = Some(default_workdir());
         }
     }
 
+    /// Executes the subcommand on the inventory instance.
     pub fn exec(&self, inventory: &mut Inventory) {
         match &self.command {
             Command::CreateType(cmd) => create_type(cmd, inventory),
@@ -57,32 +67,54 @@ impl Manager {
     }
 }
 
+/// The list of possible subcommands.
 #[derive(StructOpt, Debug)]
 pub enum Command {
+    /// Create a new item type.
     #[structopt(name = "ct")]
     CreateType(CreateTypeCommand),
+    /// Print one or multiple item type data.
     #[structopt(name = "rt")]
     ReadType(ReadTypeCommand),
+    /// Modify the properties of an item type.
     #[structopt(name = "ut")]
     UpdateType(UpdateTypeCommand),
+    /// Delete an item type.
     #[structopt(name = "dt")]
     DeleteType(DeleteTypeCommand),
+    /// Create a new item instance.
     #[structopt(name = "ci")]
     CreateInstance(CreateInstanceCommand),
+    /// Print one or multiple item instance data.
     #[structopt(name = "ri")]
     ReadInstance(ReadInstanceCommand),
+    /// Modify the properties of an item instance.
     #[structopt(name = "ui")]
     UpdateInstance(UpdateInstanceCommand),
+    /// Delete an item instance permanently and all records of it.
     #[structopt(name = "di")]
     DeleteInstance(DeleteInstanceCommand),
+    /// List expired item instances.
     #[structopt(name = "list-expired")]
     ListExpired,
+    /// List item types that do not have enough item instances
+    /// to satisfy their minimum quantity.
     #[structopt(name = "list-missing")]
     ListMissing,
+    /// Use some quantity from an item type.
     #[structopt(name = "use")]
-    Use { type_id: u32, quantity: Option<f32> },
+    Use { 
+        /// The type id from which to use the specified quantity.
+        type_id: u32,
+        /// The quantity to use. Defaults to 1.0.
+        quantity: Option<f32>
+    },
+    /// Put an item instance in the trash, keeping a record of its existence.
     #[structopt(name = "trash")]
-    Trash { instance_id: u32 },
+    Trash { 
+        /// The instance id to put to the trash.
+        instance_id: u32,
+    },
 }
 
 #[derive(StructOpt, Debug)]
@@ -103,14 +135,14 @@ pub struct CreateTypeCommand {
 #[derive(StructOpt, Debug)]
 pub struct ReadTypeCommand {
     /// The id of the item type you want to view.
-    /// Not implemented yet
+    /// TODO
     #[structopt(short, long)]
-    // TODO
     id: Option<u32>,
     /// The name of the item type you want to view.
     #[structopt(short, long)]
     name: Option<String>,
-    // TODO
+    /// Print only the types that have missing items.
+    /// TODO
     #[structopt(short, long)]
     missing: bool,
 }
@@ -146,32 +178,40 @@ pub struct CreateInstanceCommand {
     /// The quantity of this item instance. The unit is specified in the item instance. Defaults to 1.0.
     #[structopt(short, long, default_value = "1.0")]
     quantity: f32,
+    /// The model name of this item instance.
     #[structopt(short, long)]
     model: Option<String>,
+    /// The serial number of this item instance.
     #[structopt(short, long)]
     serial: Option<String>,
+    /// Extra data.
     #[structopt(long)]
     extra: Option<String>,
+    /// The location where this item instance is stored.
     #[structopt(short, long)]
     location: Option<String>,
+    /// The monetary value of this item instance.
     #[structopt(short, long)]
     value: Option<f32>,
+    /// The date/time at which this item instance expires.
     #[structopt(short, long)]
     expires_at: Option<humantime::Timestamp>,
 }
 
 #[derive(StructOpt, Debug)]
 pub struct ReadInstanceCommand {
-    /// The id of the item type.
+    /// The id of the item instance.
     #[structopt(short, long)]
     id: Option<u32>,
+    /// The type of the associated item type.
     #[structopt(short, long)]
     type_id: Option<u32>,
+    /// The name of the associated item type.
     #[structopt(long)]
     type_name: Option<String>,
+    /// List only item instances that are expired.
     #[structopt(short, long)]
     expired: bool,
-    // TODO
 }
 
 #[derive(StructOpt, Debug)]
@@ -181,25 +221,32 @@ pub struct UpdateInstanceCommand {
     /// The quantity of this item instance. The unit is specified in the item instance.
     #[structopt(short, long)]
     quantity: Option<f32>,
+    /// The model type of this item instance.
     #[structopt(short, long)]
     model: Option<String>,
+    /// The serial number of this item instance.
     #[structopt(short, long)]
     serial: Option<String>,
+    /// Extra data.
     #[structopt(long)]
     extra: Option<String>,
+    /// The physical location of this item instance.
     #[structopt(short, long)]
     location: Option<String>,
+    /// The monetary value of this item instance.
     #[structopt(short, long)]
     value: Option<f32>,
+    /// The date/time at which the item instance will expire.
     #[structopt(short, long)]
     expires_at: Option<Option<humantime::Timestamp>>,
+    /// The date/time at which this item instance was used for the first time.
     #[structopt(short, long)]
     opened_at: Option<Option<humantime::Timestamp>>,
 }
 
 #[derive(StructOpt, Debug)]
 pub struct DeleteInstanceCommand {
-    /// The id of the item type.
+    /// The id of the item instance.
     id: u32,
 }
 
@@ -300,7 +347,7 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory) {
         let type_ids = types.iter().map(|t| t.id).collect::<Vec<_>>();
         inventory.item_instances.iter().filter(|ii| type_ids.contains(&ii.item_type)).collect::<Vec<_>>()
     } else {
-        vec![]
+        inventory.item_instances.iter().collect::<Vec<_>>()
     };
     if cmd.expired {
         let sys_time = SystemTime::now();
@@ -471,6 +518,7 @@ pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventor
 }
 
 pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inventory) {
+    // TODO prefer using already opened instances.
     if let Some(mut item_instance) = inventory
         .item_instances
         .iter_mut()

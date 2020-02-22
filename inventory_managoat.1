@@ -1,0 +1,98 @@
+.TH INVENTORY_MANAGOAT 1 inventory_managoat\-VERSION
+.SH NAME
+inventory_managoat \- Simple Inventory Manager
+.SH SYNOPSIS
+.B inventory_managoat [FLAGS] [OPTIONS] <SUBCOMMAND>
+.SH DESCRIPTION
+.P
+Inventory Managoat is a command-line based inventory manager.
+It is used to keep a list of "things" (usually physical items) that you own.
+It provides simple but effective ways to interact with this list.
+.P
+To use the program, you have to specify the general flags [FLAGS] and options [OPTIONS],
+then the ACTION you want to execute over the inventory list <SUBCOMMAND>
+and finally the options specific to that subcommand.
+.TP
+For a full usage description, use
+.RS
+.B inventory_managoat --help
+.TP
+.B inventory_managoat <SUBCOMMAND> --help
+.RE
+which will show all available options. Alternatively, read the rest of this page, which contains all the non subcommand-specific options.
+
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Prints help information
+.TP
+.B \-i, \-\-interactive
+Enables interactive mode using curses. TODO
+.TP
+.B \-m, \-\-minimal
+Enables printing of the data without creating pretty tables. TODO
+.TP
+.B \-q, \-\-quiet
+Enables quiet mode. Disables all output
+.TP
+.B \-V, \-\-version
+Prints version information
+.TP
+.B \-f, \-\-fields <fields>...
+Specify which fields should be printed. TODO
+.TP
+.B \-n, \-\-name <name>
+Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to "inventory".
+.TP
+.B \-w, \-\-workdir <workdir>
+The directory to use to load and save the inventory files. Defaults to the default configuration directory of your user
+
+.SH COMMANDS - Types
+.TP
+.B ct
+Create a new item type
+.TP
+.B rt
+Print one or multiple item type data
+.TP
+.B ut
+Modify the properties of an item type
+.TP
+.B dt
+Delete an item type
+
+.SH COMMANDS - Instances
+.TP
+.B ci
+Create a new item instance
+.TP
+.B ri
+Print one or multiple item instance data
+.TP
+.B ui
+Modify the properties of an item instance
+.TP
+.B di
+Delete an item instance permanently and all records of it
+
+.SH COMMANDS - Utilities
+.TP
+.B list-expired
+List expired item instances
+.TP
+.B list-missing
+List item types that do not have enough item instances to satisfy their minimum quantity
+.TP
+.B trash
+Put an item instance in the trash, keeping a record of its existence
+.TP
+.B use
+Use some quantity from an item type
+
+.SH CUSTOMIZATION
+Inventory Managoat is customized by specifying command line options or modifying the source code/patching in features according to your needs.
+.SH SEE ALSO
+.SH ISSUES
+See https://github.com/jojolepro/inventory-managoat/issues
+.SH BUGS
+Send all bug reports and pull requests/patches to https://github.com/jojolepro/inventory-managoat

@@ -1,2 +1,2 @@
 # Inventory Managoat
-A cli-based inventory manager.
+A simple command line based inventory manager.
