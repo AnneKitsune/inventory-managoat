@@ -54,40 +54,28 @@ The directory to use to load and save the inventory files. Defaults to the defau
 ## COMMANDS - Types
 
 ```
--ct
-Create a new item type
--rt
-Print one or multiple item type data
--ut
-Modify the properties of an item type
--dt
-Delete an item type
+ct - Create a new item type
+rt - Print one or multiple item type data
+ut - Modify the properties of an item type
+dt - Delete an item type
 ```
 
 ## COMMANDS - Instances
 
 ```
--ci
-Create a new item instance
--ri
-Print one or multiple item instance data
--ui
-Modify the properties of an item instance
--di
-Delete an item instance permanently and all records of it
+ci - Create a new item instance
+ri - Print one or multiple item instance data
+ui - Modify the properties of an item instance
+di - Delete an item instance permanently and all records of it
 ```
 
 ## COMMANDS - Utilities
 
 ```
--list-expired
-List expired item instances
--list-missing
-List item types that do not have enough item instances to satisfy their minimum quantity
--trash
-Put an item instance in the trash, keeping a record of its existence
--use
-Use some quantity from an item type
+list-expired - List expired item instances
+list-missing - List item types that do not have enough item instances to satisfy their minimum quantity
+trash        - Put an item instance in the trash, keeping a record of its existence
+use          - Use some quantity from an item type
 ```
 
 ## CUSTOMIZATION
