@@ -2,7 +2,7 @@
 A Simple Command Line Based Inventory Manager.
 
 ## Basic Usage
-inventory_managoat [FLAGS] [OPTIONS] <SUBCOMMAND>
+inventory_managoat [FLAGS] [OPTIONS] \<SUBCOMMAND\>
 
 ## Author
 This software was written by Jojolepro. Documentation was reviewed by Nikekson.
@@ -14,13 +14,13 @@ It is used to keep a list of "things" (usually physical items) that you own.
 It provides simple but effective ways to interact with this list.
 
 To use the program, you have to specify the general flags [FLAGS] and options [OPTIONS],
-then the ACTION you want to execute over the inventory list <SUBCOMMAND>
+then the ACTION you want to execute over the inventory list \<SUBCOMMAND\>
 and finally the options specific to that subcommand.
 
 For a full usage description, use
 ```
 inventory_managoat --help
-inventory_managoat <SUBCOMMAND> --help
+inventory_managoat \<SUBCOMMAND\> --help
 ```
 which will show all available options. Alternatively, read the rest of this page, which contains all the non subcommand-specific options.
 
@@ -41,13 +41,13 @@ Enables quiet mode. Disables all output
 --V, --version
 Prints version information
 
---f, --fields <fields>...
+--f, --fields \<fields\>...
 Specify which fields should be printed. TODO
 
---n, --name <name>
+--n, --name \<name\>
 Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to "inventory".
 
---w, --workdir <workdir>
+--w, --workdir \<workdir\>
 The directory to use to load and save the inventory files. Defaults to the default configuration directory of your user
 ```
 
