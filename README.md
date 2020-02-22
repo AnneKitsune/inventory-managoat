@@ -20,7 +20,7 @@ and finally the options specific to that subcommand.
 For a full usage description, use
 ```
 inventory_managoat --help
-inventory_managoat \<SUBCOMMAND\> --help
+inventory_managoat <SUBCOMMAND> --help
 ```
 which will show all available options. Alternatively, read the rest of this page, which contains all the non subcommand-specific options.
 
