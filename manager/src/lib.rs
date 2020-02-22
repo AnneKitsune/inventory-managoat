@@ -3,9 +3,9 @@ extern crate serde;
 #[macro_use]
 extern crate derive_builder;
 
+use std::fmt;
 use std::result::Result;
 use std::time::{Duration, SystemTime};
-use std::fmt;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Builder)]
 pub struct ItemType {
@@ -22,7 +22,17 @@ pub struct ItemType {
 
 impl fmt::Display for ItemType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{};{};{};{};{}", self.id, self.name, self.minimum_quantity, self.ttl.map(|ttl| humantime::format_duration(ttl).to_string()).unwrap_or("".to_string()), self.opened_by_default)
+        write!(
+            f,
+            "{};{};{};{};{}",
+            self.id,
+            self.name,
+            self.minimum_quantity,
+            self.ttl
+                .map(|ttl| humantime::format_duration(ttl).to_string())
+                .unwrap_or("".to_string()),
+            self.opened_by_default
+        )
     }
 }
 
@@ -57,7 +67,24 @@ pub struct ItemInstance {
 
 impl fmt::Display for ItemInstance {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{};{};{};{};{};{};{};{};{};{}", self.id, self.item_type, self.quantity, conv(&self.model), conv(&self.serial), conv(&self.extra), conv(&self.location), conv(&self.value), self.opened_at.map(|t| humantime::format_rfc3339(t).to_string()).unwrap_or("".to_string()), self.expires_at.map(|t| humantime::format_rfc3339(t).to_string()).unwrap_or("".to_string()))
+        write!(
+            f,
+            "{};{};{};{};{};{};{};{};{};{}",
+            self.id,
+            self.item_type,
+            self.quantity,
+            conv(&self.model),
+            conv(&self.serial),
+            conv(&self.extra),
+            conv(&self.location),
+            conv(&self.value),
+            self.opened_at
+                .map(|t| humantime::format_rfc3339(t).to_string())
+                .unwrap_or("".to_string()),
+            self.expires_at
+                .map(|t| humantime::format_rfc3339(t).to_string())
+                .unwrap_or("".to_string())
+        )
     }
 }
 

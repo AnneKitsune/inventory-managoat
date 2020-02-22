@@ -91,15 +91,15 @@ pub enum Command {
     ListMissing,
     /// Use some quantity from an item type.
     #[structopt(name = "use")]
-    Use { 
+    Use {
         /// The type id from which to use the specified quantity.
         type_id: u32,
         /// The quantity to use. Defaults to 1.0.
-        quantity: Option<f32>
+        quantity: Option<f32>,
     },
     /// Put an item instance in the trash, keeping a record of its existence.
     #[structopt(name = "trash")]
-    Trash { 
+    Trash {
         /// The instance id to put to the trash.
         instance_id: u32,
     },
@@ -313,7 +313,12 @@ pub fn create_type<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
 
 pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool) {
     let res = if let Some(id) = &cmd.id {
-        inventory.item_types.iter().find(|it| it.id == *id).map(|it| vec![it]).unwrap_or(vec![])
+        inventory
+            .item_types
+            .iter()
+            .find(|it| it.id == *id)
+            .map(|it| vec![it])
+            .unwrap_or(vec![])
     } else if let Some(name) = &cmd.name {
         inventory.get_types_for_name(&name.to_string())
     } else {
@@ -324,13 +329,23 @@ pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool
 
 pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minimal: bool) {
     let mut instances = if let Some(id) = cmd.id {
-        inventory.item_instances.iter().filter(|ii| ii.id == id).collect::<Vec<_>>()
+        inventory
+            .item_instances
+            .iter()
+            .filter(|ii| ii.id == id)
+            .collect::<Vec<_>>()
     } else if let Some(type_id) = cmd.type_id {
-        inventory.get_instances_for_type(type_id.clone()).expect("Unknown type id specified")
+        inventory
+            .get_instances_for_type(type_id.clone())
+            .expect("Unknown type id specified")
     } else if let Some(type_name) = &cmd.type_name {
         let types = inventory.get_types_for_name(&type_name);
         let type_ids = types.iter().map(|t| t.id).collect::<Vec<_>>();
-        inventory.item_instances.iter().filter(|ii| type_ids.contains(&ii.item_type)).collect::<Vec<_>>()
+        inventory
+            .item_instances
+            .iter()
+            .filter(|ii| type_ids.contains(&ii.item_type))
+            .collect::<Vec<_>>()
     } else {
         inventory.item_instances.iter().collect::<Vec<_>>()
     };
@@ -459,7 +474,9 @@ pub fn delete_type<'a>(cmd: &DeleteTypeCommand, inventory: &mut Inventory) {
 }
 
 pub fn delete_instance<'a>(cmd: &DeleteInstanceCommand, inventory: &mut Inventory) {
-    inventory.delete_item_instance(cmd.id).expect("Failed to delete item instance. Wrong id specified");
+    inventory
+        .delete_item_instance(cmd.id)
+        .expect("Failed to delete item instance. Wrong id specified");
 }
 
 pub fn create_instance<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
@@ -575,8 +592,15 @@ pub fn print_missing<'a>(inventory: &mut Inventory, minimal: bool) {
         .item_types
         .iter()
         .filter(|t| {
-            inventory.item_instances.iter().filter(|ii| ii.item_type == t.id).map(|ii| ii.quantity).fold(0.0, |accum, e| accum + e) < t.minimum_quantity
-        }).collect::<Vec<_>>();
+            inventory
+                .item_instances
+                .iter()
+                .filter(|ii| ii.item_type == t.id)
+                .map(|ii| ii.quantity)
+                .fold(0.0, |accum, e| accum + e)
+                < t.minimum_quantity
+        })
+        .collect::<Vec<_>>();
     print_item_types(&types, minimal);
 }
 
