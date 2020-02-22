@@ -46,9 +46,9 @@ impl Manager {
             Command::UpdateType(cmd) => update_type(cmd, inventory),
             Command::DeleteType(cmd) => delete_type(cmd, inventory),
             Command::CreateInstance(cmd) => create_instance(cmd, inventory),
-            Command::ReadInstance(cmd) => {} //edit(cmd, inventory),
+            Command::ReadInstance(cmd) => read_instance(cmd, inventory),
             Command::UpdateInstance(cmd) => update_instance(cmd, inventory),
-            Command::DeleteInstance(cmd) => {} //open(cmd, inventory),
+            Command::DeleteInstance(cmd) => delete_instance(cmd, inventory),
             Command::ListExpired => print_expired(inventory),
             Command::ListMissing => print_missing(inventory),
             Command::Use { type_id, quantity } => use_instance(*type_id, *quantity, inventory),
@@ -291,12 +291,28 @@ pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory) {
 }
 
 pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory) {
-    let res = if let Some(name) = &cmd.name {
-        inventory.get_types_for_name(&name.to_string())
+    let mut instances = if let Some(id) = cmd.id {
+        inventory.item_instances.iter().filter(|ii| ii.id == id).collect::<Vec<_>>()
+    } else if let Some(type_id) = cmd.type_id {
+        inventory.get_instances_for_type(type_id.clone()).expect("Unknown type id specified")
+    } else if let Some(type_name) = &cmd.type_name {
+        let types = inventory.get_types_for_name(&type_name);
+        let type_ids = types.iter().map(|t| t.id).collect::<Vec<_>>();
+        inventory.item_instances.iter().filter(|ii| type_ids.contains(&ii.item_type)).collect::<Vec<_>>()
     } else {
-        inventory.item_types.iter().collect::<Vec<_>>()
+        vec![]
     };
-    print_item_types(&res);
+    if cmd.expired {
+        let sys_time = SystemTime::now();
+        instances.retain(|ii| {
+            if let Some(exp) = ii.expires_at {
+                exp >= sys_time
+            } else {
+                false
+            }
+        });
+    }
+    print_item_instances(&instances, inventory);
 }
 
 pub fn print_item_types(types: &Vec<&ItemType>) {
@@ -400,6 +416,10 @@ pub fn update_type<'a>(cmd: &UpdateTypeCommand, inventory: &mut Inventory) {
 
 pub fn delete_type<'a>(cmd: &DeleteTypeCommand, inventory: &mut Inventory) {
     inventory.delete_item_type(cmd.id);
+}
+
+pub fn delete_instance<'a>(cmd: &DeleteInstanceCommand, inventory: &mut Inventory) {
+    inventory.delete_item_instance(cmd.id).expect("Failed to delete item instance. Wrong id specified");
 }
 
 pub fn create_instance<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventory) {
