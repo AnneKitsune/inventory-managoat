@@ -511,22 +511,36 @@ pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventor
 }
 
 pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inventory) {
-    // TODO prefer using already opened instances.
-    if let Some(mut item_instance) = inventory
+    let mut remaining = 0.0;
+    let mut trash_id = 0;
+    let mut item_instances = inventory
         .item_instances
         .iter_mut()
-        .find(|t| t.id == type_id)
-    {
+        .filter(|t| t.id == type_id);
+
+    let mut target = item_instances.find(|ii| ii.opened_at.is_some());
+    if target.is_none() {
+        target = item_instances.next();
+    }
+    if let Some(item_instance) = target {
         if let Some(e) = quantity {
             item_instance.quantity = item_instance.quantity - e;
             if item_instance.quantity < 0.0 {
+                remaining = -item_instance.quantity;
+                trash_id = item_instance.id;
                 item_instance.quantity = 0.0;
             }
         } else {
             item_instance.quantity -= 1.0;
         }
+        item_instance.removed_at = Some(SystemTime::now());
     } else {
         eprintln!("Could not find an item instance with the specified id");
+    }
+
+    if remaining < -0.005 {
+        trash(trash_id, inventory);
+        use_instance(type_id, Some(remaining), inventory);
     }
 }
 
