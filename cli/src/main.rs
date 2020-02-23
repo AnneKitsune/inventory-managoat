@@ -21,6 +21,7 @@ pub struct Manager {
     #[structopt(short, long)]
     pub workdir: Option<PathBuf>,
     /// Enables printing of the data without creating pretty tables.
+    /// Showing the total quantity of each item type will be disabled.
     #[structopt(short, long)]
     pub minimal: bool,
     /// The action to execute on the inventory.
@@ -324,7 +325,7 @@ pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool
     } else {
         inventory.item_types.iter().collect::<Vec<_>>()
     };
-    print_item_types(&res, minimal);
+    print_item_types(&res, inventory, minimal);
 }
 
 pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minimal: bool) {
@@ -332,7 +333,7 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
         inventory
             .item_instances
             .iter()
-            .filter(|ii| ii.id == id)
+            .filter(|ii| ii.id == id && ii.removed_at.is_none())
             .collect::<Vec<_>>()
     } else if let Some(type_id) = cmd.type_id {
         inventory
@@ -344,10 +345,10 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
         inventory
             .item_instances
             .iter()
-            .filter(|ii| type_ids.contains(&ii.item_type))
+            .filter(|ii| type_ids.contains(&ii.item_type) && ii.removed_at.is_none())
             .collect::<Vec<_>>()
     } else {
-        inventory.item_instances.iter().collect::<Vec<_>>()
+        inventory.item_instances.iter().filter(|ii| ii.removed_at.is_none()).collect::<Vec<_>>()
     };
     if cmd.expired {
         let sys_time = SystemTime::now();
@@ -362,12 +363,12 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
     print_item_instances(&instances, inventory, minimal);
 }
 
-pub fn print_item_types(types: &Vec<&ItemType>, minimal: bool) {
+pub fn print_item_types(types: &Vec<&ItemType>, inventory: &Inventory, minimal: bool) {
     if minimal {
         types.iter().for_each(|it| println!("{}", it));
     } else {
         let mut table = Table::new();
-        table.add_row(row!["id", "name", "min", "ttl", "open default"]);
+        table.add_row(row!["id", "name", "min", "ttl", "open default", "total quantity"]);
         types.iter().for_each(|t| {
             table.add_row(row![
                 t.id.to_string(),
@@ -377,7 +378,8 @@ pub fn print_item_types(types: &Vec<&ItemType>, minimal: bool) {
                     Some(ttl) => humantime::format_duration(ttl).to_string(),
                     None => "-".to_string(),
                 },
-                t.opened_by_default.to_string()
+                t.opened_by_default.to_string(),
+                inventory.quantity_for_type(t.id),
             ]);
         });
         table.printstd();
@@ -533,7 +535,7 @@ pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inv
     let mut item_instances = inventory
         .item_instances
         .iter_mut()
-        .filter(|t| t.id == type_id);
+        .filter(|t| t.id == type_id && t.removed_at.is_none());
 
     let mut target = item_instances.find(|ii| ii.opened_at.is_some());
     if target.is_none() {
@@ -550,7 +552,9 @@ pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inv
         } else {
             item_instance.quantity -= 1.0;
         }
-        item_instance.removed_at = Some(SystemTime::now());
+        if item_instance.opened_at.is_none() {
+            item_instance.opened_at = Some(SystemTime::now());
+        }
     } else {
         eprintln!("Could not find an item instance with the specified id");
     }
@@ -582,6 +586,7 @@ pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
         .find(|t| t.id == instance_id)
     {
         item_instance.alive = false;
+        item_instance.removed_at = Some(SystemTime::now());
     } else {
         eprintln!("Could not find an item instance with the specified id");
     }
@@ -592,16 +597,10 @@ pub fn print_missing<'a>(inventory: &mut Inventory, minimal: bool) {
         .item_types
         .iter()
         .filter(|t| {
-            inventory
-                .item_instances
-                .iter()
-                .filter(|ii| ii.item_type == t.id)
-                .map(|ii| ii.quantity)
-                .fold(0.0, |accum, e| accum + e)
-                < t.minimum_quantity
+            inventory.quantity_for_type(t.id)< t.minimum_quantity
         })
         .collect::<Vec<_>>();
-    print_item_types(&types, minimal);
+    print_item_types(&types, inventory, minimal);
 }
 
 pub fn print_expired<'a>(inventory: &mut Inventory, minimal: bool) {

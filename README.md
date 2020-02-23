@@ -30,7 +30,7 @@ which will show all available options. Alternatively, read the rest of this page
 Prints help information
 
 --m, --minimal
-Enables printing of the data without creating pretty tables.
+Enables printing of the data without creating pretty tables. The minimal mode will not show the total quantity of item types.
 
 --V, --version
 Prints version information

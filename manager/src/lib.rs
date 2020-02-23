@@ -155,7 +155,7 @@ impl Inventory {
         Ok(self
             .item_instances
             .iter()
-            .filter(|inst| inst.item_type == id)
+            .filter(|inst| inst.item_type == id && inst.removed_at.is_none())
             .collect::<Vec<_>>())
     }
 
@@ -182,6 +182,15 @@ impl Inventory {
             .iter()
             .filter(|t| t.name.to_lowercase().contains(&name.to_lowercase()))
             .collect::<Vec<_>>()
+    }
+
+    pub fn quantity_for_type(&self, type_id: u32) -> f32 {
+        self
+            .item_instances
+            .iter()
+            .filter(|ii| ii.item_type == type_id && ii.removed_at.is_none())
+            .map(|ii| ii.quantity)
+            .fold(0.0, |accum, e| accum + e)
     }
 }
 
