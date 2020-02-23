@@ -565,20 +565,6 @@ pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inv
     }
 }
 
-pub fn open<'a>(matches: &ArgMatches<'a>, inventory: &mut Inventory) {
-    if let Some(mut item_instance) = inventory.item_instances.iter_mut().find(|t| {
-        t.id == matches
-            .value_of("id")
-            .unwrap()
-            .parse::<u32>()
-            .expect("Invalid id, expected unsigned integer")
-    }) {
-        item_instance.opened_at = Some(SystemTime::now().into());
-    } else {
-        eprintln!("Could not find an item instance with the specified id");
-    }
-}
-
 pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
     if let Some(mut item_instance) = inventory
         .item_instances
