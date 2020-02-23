@@ -185,8 +185,7 @@ impl Inventory {
     }
 
     pub fn quantity_for_type(&self, type_id: u32) -> f32 {
-        self
-            .item_instances
+        self.item_instances
             .iter()
             .filter(|ii| ii.item_type == type_id && ii.removed_at.is_none())
             .map(|ii| ii.quantity)

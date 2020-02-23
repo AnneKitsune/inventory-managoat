@@ -348,7 +348,11 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
             .filter(|ii| type_ids.contains(&ii.item_type) && ii.removed_at.is_none())
             .collect::<Vec<_>>()
     } else {
-        inventory.item_instances.iter().filter(|ii| ii.removed_at.is_none()).collect::<Vec<_>>()
+        inventory
+            .item_instances
+            .iter()
+            .filter(|ii| ii.removed_at.is_none())
+            .collect::<Vec<_>>()
     };
     if cmd.expired {
         let sys_time = SystemTime::now();
@@ -368,7 +372,14 @@ pub fn print_item_types(types: &Vec<&ItemType>, inventory: &Inventory, minimal: 
         types.iter().for_each(|it| println!("{}", it));
     } else {
         let mut table = Table::new();
-        table.add_row(row!["id", "name", "min", "ttl", "open default", "total quantity"]);
+        table.add_row(row![
+            "id",
+            "name",
+            "min",
+            "ttl",
+            "open default",
+            "total quantity"
+        ]);
         types.iter().for_each(|t| {
             table.add_row(row![
                 t.id.to_string(),
@@ -582,9 +593,7 @@ pub fn print_missing<'a>(inventory: &mut Inventory, minimal: bool) {
     let types = inventory
         .item_types
         .iter()
-        .filter(|t| {
-            inventory.quantity_for_type(t.id)< t.minimum_quantity
-        })
+        .filter(|t| inventory.quantity_for_type(t.id) < t.minimum_quantity)
         .collect::<Vec<_>>();
     print_item_types(&types, inventory, minimal);
 }
