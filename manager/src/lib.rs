@@ -111,11 +111,10 @@ pub struct Inventory {
 }
 
 impl Inventory {
-    pub fn add_item_type(&mut self, mut item_type: ItemType) -> Result<(), InventoryError> {
+    pub fn add_item_type(&mut self, mut item_type: ItemType) {
         let free_id = self.free_type_id();
         item_type.id = free_id;
         self.item_types.push(item_type);
-        Ok(())
     }
 
     pub fn add_item_instance(
@@ -131,6 +130,55 @@ impl Inventory {
         item_instance.added_at = Some(SystemTime::now());
         self.item_instances.push(item_instance);
         Ok(())
+    }
+
+    pub fn use_instance<'a>(&mut self, type_id: u32, quantity: Option<f32>) {
+        let mut remaining = 0.0;
+        let mut trash_id = 0;
+        let mut item_instances = self
+            .item_instances
+            .iter_mut()
+            .filter(|t| t.id == type_id && t.removed_at.is_none());
+    
+        let mut target = item_instances.find(|ii| ii.opened_at.is_some());
+        if target.is_none() {
+            target = item_instances.next();
+        }
+        if let Some(item_instance) = target {
+            if let Some(e) = quantity {
+                item_instance.quantity = item_instance.quantity - e;
+                if item_instance.quantity < 0.0 {
+                    remaining = -item_instance.quantity;
+                    trash_id = item_instance.id;
+                    item_instance.quantity = 0.0;
+                }
+            } else {
+                item_instance.quantity -= 1.0;
+            }
+            if item_instance.opened_at.is_none() {
+                item_instance.opened_at = Some(SystemTime::now());
+            }
+        } else {
+            eprintln!("Could not find an item instance with the specified id");
+        }
+    
+        if remaining < -0.005 {
+            self.trash(trash_id);
+            self.use_instance(type_id, Some(remaining));
+        }
+    }
+
+    pub fn trash<'a>(&mut self, instance_id: u32) {
+        if let Some(mut item_instance) = self
+            .item_instances
+            .iter_mut()
+            .find(|t| t.id == instance_id)
+        {
+            item_instance.alive = false;
+            item_instance.removed_at = Some(SystemTime::now());
+        } else {
+            eprintln!("Could not find an item instance with the specified id");
+        }
     }
 
     pub fn delete_item_type(&mut self, id: u32) {
@@ -164,17 +212,11 @@ impl Inventory {
     }
 
     fn free_type_id(&self) -> u32 {
-        self.item_types
-            .iter()
-            .fold(0, |accum, ty| if ty.id > accum { ty.id } else { accum })
-            + 1
+        self.item_types.iter().map(|it| it.id).max().unwrap_or(0) + 1
     }
 
     fn free_instance_id(&self) -> u32 {
-        self.item_instances
-            .iter()
-            .fold(0, |accum, ty| if ty.id > accum { ty.id } else { accum })
-            + 1
+        self.item_instances.iter().map(|ii| ii.id).max().unwrap_or(0) + 1
     }
 
     pub fn get_types_for_name(&self, name: &String) -> Vec<&ItemType> {
@@ -199,29 +241,3 @@ pub enum InventoryError {
     UnknownItemInstance,
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::*;
-    #[test]
-    fn write_inventory() {
-        let mut inv = Inventory::default();
-        let ty = ItemTypeBuilder::default()
-            .id(1)
-            .name("thonk type, still the type".to_string())
-            .build()
-            .unwrap();
-        let is = ItemInstanceBuilder::default()
-            .item_type(ty.id)
-            .model(Some("some composit,e model".to_string()))
-            .build()
-            .unwrap();
-        inv.item_types.push(ty);
-        inv.item_instances.push(is);
-        let mut wtr = csv::Writer::from_writer(std::io::stdout());
-        wtr.serialize(inv.item_types).unwrap();
-        wtr.flush().unwrap();
-        let mut wtr = csv::Writer::from_writer(std::io::stdout());
-        wtr.serialize(inv.item_instances).unwrap();
-        wtr.flush().unwrap();
-    }
-}

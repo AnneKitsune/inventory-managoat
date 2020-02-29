@@ -1,4 +1,3 @@
-use clap::*;
 use manager::*;
 use prettytable::*;
 use std::fs::*;
@@ -50,8 +49,8 @@ impl Manager {
             Command::DeleteInstance(cmd) => delete_instance(cmd, inventory),
             Command::ListExpired => print_expired(inventory, self.minimal),
             Command::ListMissing => print_missing(inventory, self.minimal),
-            Command::Use { type_id, quantity } => use_instance(*type_id, *quantity, inventory),
-            Command::Trash { instance_id } => trash(*instance_id, inventory),
+            Command::Use { type_id, quantity } => inventory.use_instance(*type_id, *quantity),
+            Command::Trash { instance_id } => inventory.trash(*instance_id),
         }
     }
 }
@@ -307,9 +306,7 @@ pub fn create_type<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
     new.minimum_quantity(cmd.minimum_quantity);
     new.ttl(cmd.ttl.map(|t| t.into()));
     new.opened_by_default(cmd.open_by_default.unwrap_or(false));
-    inventory
-        .add_item_type(new.build().unwrap())
-        .expect("Failed to insert new item type");
+    inventory.add_item_type(new.build().unwrap());
 }
 
 pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool) {
@@ -328,13 +325,14 @@ pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool
     print_item_types(&res, inventory, minimal);
 }
 
+// TODO: Minimize?
 pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minimal: bool) {
     let mut instances = if let Some(id) = cmd.id {
         inventory
             .item_instances
             .iter()
-            .filter(|ii| ii.id == id && ii.removed_at.is_none())
-            .collect::<Vec<_>>()
+            .find(|ii| ii.id == id && ii.removed_at.is_none())
+            .map(|ii| vec![ii]).unwrap_or_else(|| vec![])
     } else if let Some(type_id) = cmd.type_id {
         inventory
             .get_instances_for_type(type_id.clone())
@@ -429,34 +427,17 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, min
                 t.id.to_string(),
                 item_type_str,
                 t.quantity.to_string(),
-                match &t.model {
-                    Some(model) => model.to_string(),
-                    None => "-".to_string(),
-                },
-                match &t.serial {
-                    Some(serial) => serial.to_string(),
-                    None => "-".to_string(),
-                },
-                match &t.extra {
-                    Some(extra) => extra.to_string(),
-                    None => "-".to_string(),
-                },
-                match &t.location {
-                    Some(location) => location.to_string(),
-                    None => "-".to_string(),
-                },
-                match t.value {
-                    Some(value) => value.to_string(),
-                    None => "-".to_string(),
-                },
-                match t.opened_at {
-                    Some(open) => humantime::format_rfc3339(open).to_string(),
-                    None => "-".to_string(),
-                },
-                match t.expires_at {
-                    Some(exp) => humantime::format_rfc3339(exp).to_string(),
-                    None => "-".to_string(),
-                },
+                conv(&t.model),
+                conv(&t.serial),
+                conv(&t.extra),
+                conv(&t.location),
+                conv(&t.value),
+                t.opened_at
+                    .map(|t| humantime::format_rfc3339(t).to_string())
+                    .unwrap_or("".to_string()),
+                t.expires_at
+                    .map(|t| humantime::format_rfc3339(t).to_string())
+                    .unwrap_or("".to_string()),
             ]);
         });
         table.printstd();
@@ -527,7 +508,7 @@ pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventor
             item_instance.location = Some(e.clone());
         }
         if let Some(e) = &cmd.value {
-            item_instance.value = Some(e.clone());
+            item_instance.value = Some(*e);
         }
         if let Some(e) = &cmd.expires_at {
             item_instance.expires_at = e.clone().map(|t| t.into());
@@ -535,55 +516,6 @@ pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventor
         if let Some(e) = &cmd.opened_at {
             item_instance.opened_at = e.clone().map(|t| t.into());
         }
-    } else {
-        eprintln!("Could not find an item instance with the specified id");
-    }
-}
-
-pub fn use_instance<'a>(type_id: u32, quantity: Option<f32>, inventory: &mut Inventory) {
-    let mut remaining = 0.0;
-    let mut trash_id = 0;
-    let mut item_instances = inventory
-        .item_instances
-        .iter_mut()
-        .filter(|t| t.id == type_id && t.removed_at.is_none());
-
-    let mut target = item_instances.find(|ii| ii.opened_at.is_some());
-    if target.is_none() {
-        target = item_instances.next();
-    }
-    if let Some(item_instance) = target {
-        if let Some(e) = quantity {
-            item_instance.quantity = item_instance.quantity - e;
-            if item_instance.quantity < 0.0 {
-                remaining = -item_instance.quantity;
-                trash_id = item_instance.id;
-                item_instance.quantity = 0.0;
-            }
-        } else {
-            item_instance.quantity -= 1.0;
-        }
-        if item_instance.opened_at.is_none() {
-            item_instance.opened_at = Some(SystemTime::now());
-        }
-    } else {
-        eprintln!("Could not find an item instance with the specified id");
-    }
-
-    if remaining < -0.005 {
-        trash(trash_id, inventory);
-        use_instance(type_id, Some(remaining), inventory);
-    }
-}
-
-pub fn trash<'a>(instance_id: u32, inventory: &mut Inventory) {
-    if let Some(mut item_instance) = inventory
-        .item_instances
-        .iter_mut()
-        .find(|t| t.id == instance_id)
-    {
-        item_instance.alive = false;
-        item_instance.removed_at = Some(SystemTime::now());
     } else {
         eprintln!("Could not find an item instance with the specified id");
     }

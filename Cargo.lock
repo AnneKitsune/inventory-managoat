@@ -292,7 +292,6 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 name = "inv"
 version = "0.1.0"
 dependencies = [
- "clap",
  "dirs 2.0.2",
  "humantime",
  "manager",
@@ -323,7 +322,6 @@ checksum = "eb147597cdf94ed43ab7a9038716637d2d1bf2bc571da995d0028dec06bd3018"
 name = "manager"
 version = "0.1.0"
 dependencies = [
- "csv",
  "derive_builder",
  "humantime",
  "serde",
