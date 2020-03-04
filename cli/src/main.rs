@@ -246,7 +246,7 @@ fn main() {
 pub fn default_workdir() -> PathBuf {
     let mut dir =
         dirs::data_local_dir().expect("Failed to locate suitable folder to store inventory data.");
-    dir.push("inventory_manager");
+    dir.push("inventory_managoat");
     dir
 }
 

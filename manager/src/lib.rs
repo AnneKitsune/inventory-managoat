@@ -6,6 +6,7 @@ extern crate derive_builder;
 use std::fmt;
 use std::result::Result;
 use std::time::{Duration, SystemTime};
+use std::ops::Add;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Builder)]
 pub struct ItemType {
@@ -43,8 +44,6 @@ pub struct ItemInstance {
     pub item_type: u32,
     #[builder(default = "1.0")]
     pub quantity: f32,
-    #[builder(default = "true")]
-    pub alive: bool,
     #[builder(default)]
     pub model: Option<String>,
     #[builder(default)]
@@ -123,7 +122,14 @@ impl Inventory {
     ) -> Result<(), InventoryError> {
         let free_id = self.free_instance_id();
         item_instance.id = free_id;
-        if !self.has_item_type(item_instance.item_type) {
+        if let Some(it) = self.item_types.iter().find(|it| it.id == item_instance.item_type) {
+            if it.opened_by_default {
+                item_instance.opened_at = Some(SystemTime::now());
+                if let Some(ttl) = it.ttl {
+                    item_instance.expires_at = Some(SystemTime::now().add(ttl.clone()));
+                }
+            }
+        } else {
             return Err(InventoryError::UnknownItemType);
         }
         // TODO check the type "open by default" thingy
@@ -138,17 +144,18 @@ impl Inventory {
         let mut item_instances = self
             .item_instances
             .iter_mut()
-            .filter(|t| t.id == type_id && t.removed_at.is_none());
+            .filter(|t| t.item_type == type_id && t.removed_at.is_none())
+            .collect::<Vec<_>>();
     
-        let mut target = item_instances.find(|ii| ii.opened_at.is_some());
+        let mut target = item_instances.iter_mut().find(|ii| ii.opened_at.is_some());
         if target.is_none() {
-            target = item_instances.next();
+            target = item_instances.first_mut();
         }
         if let Some(item_instance) = target {
             if let Some(e) = quantity {
                 item_instance.quantity = item_instance.quantity - e;
                 if item_instance.quantity < 0.0 {
-                    remaining = -item_instance.quantity;
+                    remaining = item_instance.quantity;
                     trash_id = item_instance.id;
                     item_instance.quantity = 0.0;
                 }
@@ -157,14 +164,28 @@ impl Inventory {
             }
             if item_instance.opened_at.is_none() {
                 item_instance.opened_at = Some(SystemTime::now());
+                let it = self.item_types.iter().find(|it| it.id == type_id).expect("No item type found with the specified id");
+                if let Some(ttl) = it.ttl {
+                    let candidate_exp = SystemTime::now().add(ttl);
+                    let new_exp = if let Some(old) = item_instance.expires_at {
+                        if old < candidate_exp {
+                            old
+                        } else {
+                            candidate_exp
+                        }
+                    } else {
+                        candidate_exp
+                    };
+                    item_instance.expires_at = Some(new_exp);
+                }
             }
         } else {
-            eprintln!("Could not find an item instance with the specified id");
+            eprintln!("Could not find an item instance with the specified type id to use (or all items were used.)");
         }
     
-        if remaining < -0.005 {
+        if remaining < -0.0005 {
             self.trash(trash_id);
-            self.use_instance(type_id, Some(remaining));
+            self.use_instance(type_id, Some(-remaining));
         }
     }
 
@@ -174,10 +195,9 @@ impl Inventory {
             .iter_mut()
             .find(|t| t.id == instance_id)
         {
-            item_instance.alive = false;
             item_instance.removed_at = Some(SystemTime::now());
         } else {
-            eprintln!("Could not find an item instance with the specified id");
+            eprintln!("Could not find an item instance with the specified id to trash");
         }
     }
 
@@ -188,7 +208,6 @@ impl Inventory {
 
     pub fn delete_item_instance(&mut self, id: u32) -> Result<(), InventoryError> {
         if let Some(inst) = self.item_instances.iter_mut().find(|inst| inst.id == id) {
-            inst.alive = false;
             inst.removed_at = Some(SystemTime::now());
             Ok(())
         } else {
