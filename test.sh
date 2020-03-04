@@ -17,6 +17,8 @@ echo "List Missing"
 sleep 1.1
 echo "Expired:"
 ./target/release/inv list-expired
+./target/release/inv ri -e
+echo "All"
 ./target/release/inv ri
 ./target/release/inv rt
 echo "Use 0.5"

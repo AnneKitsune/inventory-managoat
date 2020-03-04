@@ -356,7 +356,7 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
         let sys_time = SystemTime::now();
         instances.retain(|ii| {
             if let Some(exp) = ii.expires_at {
-                exp >= sys_time
+                exp <= sys_time
             } else {
                 false
             }
