@@ -402,7 +402,8 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, min
         let mut table = Table::new();
         table.add_row(row![
             "id",
-            "(id)item type",
+            "type id",
+            "type name",
             "quantity",
             "model",
             "serial",
@@ -413,18 +414,15 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, min
             "expires at"
         ]);
         instances.iter().for_each(|t| {
-            let item_type_str = format!(
-                "({}){}",
-                t.item_type.to_string(),
-                inv.item_types
+            let item_type_str = inv.item_types
                     .iter()
                     .find(|ty| ty.id == t.item_type)
                     .expect("Failed to find item type for item instance")
                     .name
-            )
-            .to_string();
+                    .to_string();
             table.add_row(row![
                 t.id.to_string(),
+                t.item_type.to_string(),
                 item_type_str,
                 t.quantity.to_string(),
                 conv(&t.model),
