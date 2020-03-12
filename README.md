@@ -8,7 +8,7 @@ inv [FLAGS] [OPTIONS] \<SUBCOMMAND\>
 This software was written by Jojolepro. Documentation was reviewed by Nikekson.
 Support my work on [Patreon](https://www.patreon.com/jojolepro)!
 
-## DESCRIPTION
+## Description
 Inventory Managoat is a command-line based inventory manager.
 It is used to keep a list of "things" (usually physical items) that you own.
 It provides simple but effective ways to interact with this list.
@@ -24,7 +24,63 @@ inv <SUBCOMMAND> --help
 ```
 which will show all available options. Alternatively, read the rest of this page, which contains all the non subcommand-specific options.
 
-## OPTIONS
+## Common Usage
+
+List all items:
+```
+inv ri
+```
+
+List all item types:
+```
+inv rt
+```
+
+Create a new item type:
+```
+inv ct "Toilet Paper" --minimum-quantity 5
+inv ct "Milk" --ttl "1week"
+inv rt
+```
+
+Create a new item instance (an specific item that exists).
+```
+inv ci <ID OF TOILET PAPER> --quantity 3
+```
+
+List items that you don't have enough of:
+```
+inv list-missing
+```
+
+Use an item:
+```
+inv use <ID OF TOILET PAPER>
+```
+
+## Install From The AUR
+If you have access to the AUR, you can install the package like this:
+```
+yay -S inv
+```
+
+## Build From Source
+First, install rust (via rustup). See: [rustup](https://rustup.rs/)
+
+Then, run the following to build from source:
+```
+git clone https://github.com/jojolepro/inventory-managoat
+cd inventory-managoat
+
+# Debug build - for developement
+cargo build --release
+
+# Release build - for general usage
+cargo build --release
+strip target/release/inv
+```
+
+## Options
 ```
 --h, --help
 Prints help information
@@ -42,7 +98,7 @@ Uses the inventory with this name. The files will be loaded and saved using this
 The directory to use to load and save the inventory files. Defaults to the default configuration directory of your user
 ```
 
-## COMMANDS - Types
+## Commands - Types
 
 ```
 ct - Create a new item type
@@ -51,7 +107,7 @@ ut - Modify the properties of an item type
 dt - Delete an item type
 ```
 
-## COMMANDS - Instances
+## Commands - Instances
 
 ```
 ci - Create a new item instance
@@ -60,7 +116,7 @@ ui - Modify the properties of an item instance
 di - Delete an item instance permanently and all records of it
 ```
 
-## COMMANDS - Utilities
+## Commands - Utilities
 
 ```
 list-expired - List expired item instances
@@ -69,27 +125,9 @@ trash        - Put an item instance in the trash, keeping a record of its existe
 use          - Use some quantity from an item type
 ```
 
-## CUSTOMIZATION
+## Customization
 Inventory Managoat is customized by specifying command line options or modifying the source code/patching in features according to your needs.
 
-## BUILD
-First, install rust (via rustup).
-Then:
-```
-git clone https://github.com/jojolepro/inventory-managoat
-cd inventory-managoat
-
-# Debug build - for developement
-cargo build --release
-
-# Release build - for general usage
-cargo build --release
-strip target/release/inv
-```
-
-## ISSUES
-See https://github.com/jojolepro/inventory-managoat/issues
-
-## BUGS
+## Bugs
 Send all bug reports and pull requests/patches to https://github.com/jojolepro/inventory-managoat
 
