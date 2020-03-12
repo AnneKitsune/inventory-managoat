@@ -6,6 +6,7 @@ inv [FLAGS] [OPTIONS] \<SUBCOMMAND\>
 
 ## Author
 This software was written by Jojolepro. Documentation was reviewed by Nikekson.
+
 Support my work on [Patreon](https://www.patreon.com/jojolepro)!
 
 ## Description
@@ -43,7 +44,7 @@ inv ct "Milk" --ttl "1week"
 inv rt
 ```
 
-Create a new item instance (an specific item that exists).
+Create a new item instance (a specific item that exists).
 ```
 inv ci <ID OF TOILET PAPER> --quantity 3
 ```
@@ -78,6 +79,7 @@ cargo build --release
 # Release build - for general usage
 cargo build --release
 strip target/release/inv
+mv target/release/inv ~/.local/bin/inv
 ```
 
 ## Options
