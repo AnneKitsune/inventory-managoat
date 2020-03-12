@@ -82,6 +82,8 @@ strip target/release/inv
 mv target/release/inv ~/.local/bin/inv
 ```
 
+Note: On windows, you should run those commands inside of [git bash](https://gitforwindows.org/)
+
 ## Options
 ```
 --h, --help
