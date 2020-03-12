@@ -93,10 +93,10 @@ Enables printing of the data without creating pretty tables. The minimal mode wi
 --V, --version
 Prints version information
 
---n, --name \<name\>
+--n, --name <name>
 Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to "inventory".
 
---w, --workdir \<workdir\>
+--w, --workdir <workdir>
 The directory to use to load and save the inventory files. Defaults to the default configuration directory of your user
 ```
 
