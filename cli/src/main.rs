@@ -306,7 +306,8 @@ pub fn create_type<'a>(cmd: &CreateTypeCommand, inventory: &mut Inventory) {
     new.minimum_quantity(cmd.minimum_quantity);
     new.ttl(cmd.ttl.map(|t| t.into()));
     new.opened_by_default(cmd.open_by_default.unwrap_or(false));
-    inventory.add_item_type(new.build().unwrap());
+    let id = inventory.add_item_type(new.build().unwrap());
+    println!("{}", id);
 }
 
 pub fn read_type<'a>(cmd: &ReadTypeCommand, inventory: &Inventory, minimal: bool) {
@@ -483,9 +484,10 @@ pub fn create_instance<'a>(cmd: &CreateInstanceCommand, inventory: &mut Inventor
     new.quantity(cmd.quantity);
     new.expires_at(cmd.expires_at.clone().map(|t| t.into()));
 
-    inventory
+    let id = inventory
         .add_item_instance(new.build().unwrap())
         .expect("Failed to insert new item type");
+    println!("{}", id);
 }
 
 pub fn update_instance<'a>(cmd: &UpdateInstanceCommand, inventory: &mut Inventory) {

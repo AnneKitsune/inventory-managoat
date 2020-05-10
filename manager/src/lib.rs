@@ -110,16 +110,17 @@ pub struct Inventory {
 }
 
 impl Inventory {
-    pub fn add_item_type(&mut self, mut item_type: ItemType) {
+    pub fn add_item_type(&mut self, mut item_type: ItemType) -> u32 {
         let free_id = self.free_type_id();
         item_type.id = free_id;
         self.item_types.push(item_type);
+        free_id
     }
 
     pub fn add_item_instance(
         &mut self,
         mut item_instance: ItemInstance,
-    ) -> Result<(), InventoryError> {
+    ) -> Result<u32, InventoryError> {
         let free_id = self.free_instance_id();
         item_instance.id = free_id;
         if let Some(it) = self.item_types.iter().find(|it| it.id == item_instance.item_type) {
@@ -135,7 +136,7 @@ impl Inventory {
         // TODO check the type "open by default" thingy
         item_instance.added_at = Some(SystemTime::now());
         self.item_instances.push(item_instance);
-        Ok(())
+        Ok(free_id)
     }
 
     pub fn use_instance<'a>(&mut self, type_id: u32, quantity: Option<f32>) {
