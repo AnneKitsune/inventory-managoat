@@ -333,7 +333,8 @@ pub fn read_instance<'a>(cmd: &ReadInstanceCommand, inventory: &Inventory, minim
             .item_instances
             .iter()
             .find(|ii| ii.id == id && ii.removed_at.is_none())
-            .map(|ii| vec![ii]).unwrap_or_else(|| vec![])
+            .map(|ii| vec![ii])
+            .unwrap_or_else(|| vec![])
     } else if let Some(type_id) = cmd.type_id {
         inventory
             .get_instances_for_type(type_id.clone())
@@ -415,12 +416,13 @@ pub fn print_item_instances(instances: &Vec<&ItemInstance>, inv: &Inventory, min
             "expires at"
         ]);
         instances.iter().for_each(|t| {
-            let item_type_str = inv.item_types
-                    .iter()
-                    .find(|ty| ty.id == t.item_type)
-                    .expect("Failed to find item type for item instance")
-                    .name
-                    .to_string();
+            let item_type_str = inv
+                .item_types
+                .iter()
+                .find(|ty| ty.id == t.item_type)
+                .expect("Failed to find item type for item instance")
+                .name
+                .to_string();
             table.add_row(row![
                 t.id.to_string(),
                 t.item_type.to_string(),

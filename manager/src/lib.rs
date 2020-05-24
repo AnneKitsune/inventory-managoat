@@ -4,9 +4,9 @@ extern crate serde;
 extern crate derive_builder;
 
 use std::fmt;
+use std::ops::Add;
 use std::result::Result;
 use std::time::{Duration, SystemTime};
-use std::ops::Add;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Builder)]
 pub struct ItemType {
@@ -123,7 +123,11 @@ impl Inventory {
     ) -> Result<u32, InventoryError> {
         let free_id = self.free_instance_id();
         item_instance.id = free_id;
-        if let Some(it) = self.item_types.iter().find(|it| it.id == item_instance.item_type) {
+        if let Some(it) = self
+            .item_types
+            .iter()
+            .find(|it| it.id == item_instance.item_type)
+        {
             if it.opened_by_default {
                 item_instance.opened_at = Some(SystemTime::now());
                 if let Some(ttl) = it.ttl {
@@ -147,7 +151,7 @@ impl Inventory {
             .iter_mut()
             .filter(|t| t.item_type == type_id && t.removed_at.is_none())
             .collect::<Vec<_>>();
-    
+
         let mut target = item_instances.iter_mut().find(|ii| ii.opened_at.is_some());
         if target.is_none() {
             target = item_instances.first_mut();
@@ -165,7 +169,11 @@ impl Inventory {
             }
             if item_instance.opened_at.is_none() {
                 item_instance.opened_at = Some(SystemTime::now());
-                let it = self.item_types.iter().find(|it| it.id == type_id).expect("No item type found with the specified id");
+                let it = self
+                    .item_types
+                    .iter()
+                    .find(|it| it.id == type_id)
+                    .expect("No item type found with the specified id");
                 if let Some(ttl) = it.ttl {
                     let candidate_exp = SystemTime::now().add(ttl);
                     let new_exp = if let Some(old) = item_instance.expires_at {
@@ -183,7 +191,7 @@ impl Inventory {
         } else {
             eprintln!("Could not find an item instance with the specified type id to use (or all items were used.)");
         }
-    
+
         if remaining < -0.0005 {
             self.trash(trash_id);
             self.use_instance(type_id, Some(-remaining));
@@ -191,10 +199,8 @@ impl Inventory {
     }
 
     pub fn trash<'a>(&mut self, instance_id: u32) {
-        if let Some(mut item_instance) = self
-            .item_instances
-            .iter_mut()
-            .find(|t| t.id == instance_id)
+        if let Some(mut item_instance) =
+            self.item_instances.iter_mut().find(|t| t.id == instance_id)
         {
             item_instance.removed_at = Some(SystemTime::now());
         } else {
@@ -236,7 +242,12 @@ impl Inventory {
     }
 
     fn free_instance_id(&self) -> u32 {
-        self.item_instances.iter().map(|ii| ii.id).max().unwrap_or(0) + 1
+        self.item_instances
+            .iter()
+            .map(|ii| ii.id)
+            .max()
+            .unwrap_or(0)
+            + 1
     }
 
     pub fn get_types_for_name(&self, name: &String) -> Vec<&ItemType> {
@@ -260,4 +271,3 @@ pub enum InventoryError {
     UnknownItemType,
     UnknownItemInstance,
 }
-
