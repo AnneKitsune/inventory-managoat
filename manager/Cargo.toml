@@ -1,5 +1,5 @@
 [package]
-name = "manager"
+name = "inv_manager"
 version = "0.2.0"
 authors = ["jojolepro <jojolepro@jojolepro.com>"]
 edition = "2018"

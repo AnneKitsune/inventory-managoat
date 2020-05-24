@@ -1,4 +1,4 @@
-use manager::*;
+use inv_manager::*;
 use prettytable::*;
 use std::fs::*;
 use std::path::PathBuf;
