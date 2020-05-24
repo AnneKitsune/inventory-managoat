@@ -3,6 +3,12 @@ name = "inv_manager"
 version = "0.2.0"
 authors = ["jojolepro <jojolepro@jojolepro.com>"]
 edition = "2018"
+description = """
+Library for inventory_managoat (inv crate)
+"""
+repository = "https://github.com/jojolepro/inventory-managoat"
+license = "Apache-2.0"
+exclude = ["doc"]
 
 [dependencies]
 serde = { version = "1.0.104", features = ["derive"] }
