@@ -3,6 +3,14 @@ name = "inv"
 version = "0.2.0"
 authors = ["jojolepro <jojolepro@jojolepro.com>"]
 edition = "2018"
+description = """
+A Simple Command Line Inventory Manager.
+Prevent food waste and never lose track of your items!
+"""
+keywords = ["inventory", "manager", "inv"]
+repository = "https://github.com/jojolepro/inventory-managoat"
+license = "Apache-2.0"
+exclude = ["doc"]
 
 [dependencies]
 prettytable-rs = "0.8.0"
