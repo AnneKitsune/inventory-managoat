@@ -1,137 +1,89 @@
+Support an Open Source Developer! :hearts:  
+
+[![Become a patron](https://c5.patreon.com/external/logo/become_a_patron_button.png)](https://www.patreon.com/jojolepro)
+
 # Inventory Managoat
-A Simple Command Line Based Inventory Manager.
-
-## Basic Usage
-inv [FLAGS] [OPTIONS] \<SUBCOMMAND\>
-
-## Author
-This software was written by Jojolepro. Documentation was reviewed by Nikekson.
-
-Support my work on [Patreon](https://www.patreon.com/jojolepro)!
+A Simple Command Line Inventory Manager.  
+Prevent food waste and never lose track of your items!
 
 ## Description
-Inventory Managoat is a command-line based inventory manager.
-It is used to keep a list of "things" (usually physical items) that you own.
-It provides simple but effective ways to interact with this list.
+Use Inventory Manager to keep a list of things that you own.  
+It provides simple but effective ways to interact with this list.  
 
-To use the program, you have to specify the general flags [FLAGS] and options [OPTIONS],
-then the ACTION you want to execute over the inventory list \<SUBCOMMAND\>
-and finally the options specific to that subcommand.
-
-For a full usage description, use
-```
+To see all available options:
+```sh
 inv --help
 inv <SUBCOMMAND> --help
 ```
-which will show all available options. Alternatively, read the rest of this page, which contains all the non subcommand-specific options.
 
 ## Common Usage
 
-List all items:
+Create and print new item types:
+```sh
+# Creates the "Toilet Paper" type. You always want to keep at least 5 of those.
+inv ct "Toilet Paper" --minimum-quantity 5
+>0 # The ID for toilet paper
+# Creates the "Milk" type which stays fresh one week.
+inv ct "Milk" --ttl "1week"
+>1 # The ID for milk
+# Show the existing types.
+inv rt
 ```
+
+Create a new item instance (a specific item that exists):
+```sh
+# Creates 3 instances of toilet paper (ID = 0)
+inv ci 0 --quantity 3
+>2 # Instance ID for those three toilet paper rolls
+# List instances
 inv ri
 ```
 
-List all item types:
-```
-inv rt
-```
-
-Create a new item type:
-```
-inv ct "Toilet Paper" --minimum-quantity 5
-inv ct "Milk" --ttl "1week"
-inv rt
-```
-
-Create a new item instance (a specific item that exists).
-```
-inv ci <ID OF TOILET PAPER> --quantity 3
-```
-
 List items that you don't have enough of:
-```
+```sh
 inv list-missing
 ```
 
 Use an item:
+```sh
+# Use a toilet paper instance (ID = 2)
+inv use 2
 ```
-inv use <ID OF TOILET PAPER>
+
+Put an item to the trash:
+```sh
+# Trash a toilet paper instance (ID = 2)
+inv trash 2
 ```
 
 ## Install From The AUR
-If you have access to the AUR, you can install the package like this:
-```
+If you have access to the Arch User Repository, you can install the package like this:
+```sh
 yay -S inv
 ```
 
+## Install Using Cargo
+First, install Rust (using [rustup](https://rustup.rs/)).
+Then, it is as simple as:
+```sh
+cargo install -f inv
+```
+
 ## Build From Source
-First, install rust (via rustup). See: [rustup](https://rustup.rs/)
+First, install Rust (using [rustup](https://rustup.rs/)).
 
 Then, run the following to build from source:
-```
+```sh
+# Create a local copy
 git clone https://github.com/jojolepro/inventory-managoat
 cd inventory-managoat
 
-# Debug build - for developement
+# Build from source files
 cargo build --release
 
-# Release build - for general usage
-cargo build --release
-strip target/release/inv
+# Install for the current user
 mv target/release/inv ~/.local/bin/inv
 ```
 
-Note: On windows, you should run those commands inside of [git bash](https://gitforwindows.org/)
-
-## Options
-```
---h, --help
-Prints help information
-
---m, --minimal
-Enables printing of the data without creating pretty tables. The minimal mode will not show the total quantity of item types.
-
---V, --version
-Prints version information
-
---n, --name <name>
-Uses the inventory with this name. The files will be loaded and saved using this prefix. Defaults to "inventory".
-
---w, --workdir <workdir>
-The directory to use to load and save the inventory files. Defaults to the default configuration directory of your user
-```
-
-## Commands - Types
-
-```
-ct - Create a new item type
-rt - Print one or multiple item type data
-ut - Modify the properties of an item type
-dt - Delete an item type
-```
-
-## Commands - Instances
-
-```
-ci - Create a new item instance
-ri - Print one or multiple item instance data
-ui - Modify the properties of an item instance
-di - Delete an item instance permanently and all records of it
-```
-
-## Commands - Utilities
-
-```
-list-expired - List expired item instances
-list-missing - List item types that do not have enough item instances to satisfy their minimum quantity
-trash        - Put an item instance in the trash, keeping a record of its existence
-use          - Use some quantity from an item type
-```
-
-## Customization
-Inventory Managoat is customized by specifying command line options or modifying the source code/patching in features according to your needs.
-
-## Bugs
-Send all bug reports and pull requests/patches to https://github.com/jojolepro/inventory-managoat
+Note: On windows, you should run those commands inside of [git bash](https://gitforwindows.org/) or [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10).
 
