@@ -56,12 +56,6 @@ Put an item to the trash:
 inv trash 2
 ```
 
-## Install From The AUR
-If you have access to the Arch User Repository, you can install the package like this:
-```sh
-yay -S inv
-```
-
 ## Install Using Cargo
 First, install Rust (using [rustup](https://rustup.rs/)).
 Then, it is as simple as:
