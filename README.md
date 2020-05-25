@@ -44,6 +44,11 @@ List items that you don't have enough of:
 inv list-missing
 ```
 
+List items that expired (I wouldn't suggest eating those!):
+```sh
+inv list-expired
+```
+
 Use an item:
 ```sh
 # Use a toilet paper instance (ID = 2)
