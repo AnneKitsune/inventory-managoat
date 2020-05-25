@@ -80,7 +80,7 @@ cd inventory-managoat
 # Build from source files
 cargo build --release
 
-# Install for the current user
+# (Optional) Install for the current user
 mv target/release/inv ~/.local/bin/inv
 ```
 
