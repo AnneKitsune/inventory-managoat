@@ -22,10 +22,10 @@ Create and print new item types:
 ```sh
 # Creates the "Toilet Paper" type. You always want to keep at least 5 of those.
 inv ct "Toilet Paper" --minimum-quantity 5
->0 # The ID for toilet paper
+>1 # The ID for toilet paper
 # Creates the "Milk" type which stays fresh one week.
 inv ct "Milk" --ttl "1week"
->1 # The ID for milk
+>2 # The ID for milk
 # Show the existing types.
 inv rt
 ```
@@ -33,7 +33,7 @@ inv rt
 Create a new item instance (a specific item that exists):
 ```sh
 # Creates 3 instances of toilet paper (ID = 0)
-inv ci 0 --quantity 3
+inv ci 1 --quantity 3
 >2 # Instance ID for those three toilet paper rolls
 # List instances
 inv ri
